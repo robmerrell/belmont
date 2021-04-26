@@ -66,37 +66,37 @@ defmodule Belmont.CartridgeTest do
   describe "parsing the game data" do
     test "if a trainer is present the first 512 bytes should be ignored" do
       {:ok, cart} =
-        FakeROM.rom(trainer_present: 1, fill_prg_rom: 0x01, fill_chr_rom: 0x02)
+        FakeROM.rom(trainer_present: 1, fill_prg_rom_start: 0x01, fill_chr_rom_start: 0x01)
         |> Cartridge.parse_rom_contents()
 
       assert 0x01 == cart.prg_rom_banks |> List.first() |> elem(0)
       assert 0x01 == cart.prg_rom_banks |> List.first() |> elem(16_383)
-      assert 0x02 == cart.chr_rom_banks |> List.first() |> elem(0)
-      assert 0x02 == cart.chr_rom_banks |> List.first() |> elem(8_191)
+      assert 0x01 == cart.chr_rom_banks |> List.first() |> elem(0)
+      assert 0x01 == cart.chr_rom_banks |> List.first() |> elem(8_191)
     end
 
     test "if a trainer is not present don't ignore the first 512 bytes" do
       {:ok, cart} =
-        FakeROM.rom(trainer_present: 0, fill_prg_rom: 0x01, fill_chr_rom: 0x02)
+        FakeROM.rom(trainer_present: 0, fill_prg_rom_start: 0x01, fill_chr_rom_start: 0x01)
         |> Cartridge.parse_rom_contents()
 
       assert 0x01 == cart.prg_rom_banks |> List.first() |> elem(0)
       assert 0x01 == cart.prg_rom_banks |> List.first() |> elem(16_383)
-      assert 0x02 == cart.chr_rom_banks |> List.first() |> elem(0)
-      assert 0x02 == cart.chr_rom_banks |> List.first() |> elem(8_191)
+      assert 0x01 == cart.chr_rom_banks |> List.first() |> elem(0)
+      assert 0x01 == cart.chr_rom_banks |> List.first() |> elem(8_191)
     end
 
     test "multiple program and character rom banks should be read" do
       {:ok, cart} =
-        FakeROM.rom(prg_rom_banks_count: 2, chr_rom_banks_count: 4, fill_prg_rom: 0x01, fill_chr_rom: 0x02)
+        FakeROM.rom(prg_rom_banks_count: 2, chr_rom_banks_count: 4, fill_prg_rom_start: 0x01, fill_chr_rom_start: 0x01)
         |> Cartridge.parse_rom_contents()
 
       assert length(cart.prg_rom_banks) == 2
       assert length(cart.chr_rom_banks) == 4
       assert 0x01 == cart.prg_rom_banks |> List.first() |> elem(0)
       assert 0x01 == cart.prg_rom_banks |> List.first() |> elem(16_383)
-      assert 0x02 == cart.chr_rom_banks |> List.first() |> elem(0)
-      assert 0x02 == cart.chr_rom_banks |> List.first() |> elem(8_191)
+      assert 0x01 == cart.chr_rom_banks |> List.first() |> elem(0)
+      assert 0x01 == cart.chr_rom_banks |> List.first() |> elem(8_191)
     end
   end
 end

@@ -1,7 +1,7 @@
 defmodule Belmont.FakeROM do
   @defaults %{
-    fill_prg_rom: 0,
-    fill_chr_rom: 0,
+    fill_prg_rom_start: 0x00,
+    fill_chr_rom_start: 0x00,
     prg_rom_banks_count: 1,
     chr_rom_banks_count: 1,
     prg_ram_banks_count: 1,
@@ -16,8 +16,8 @@ defmodule Belmont.FakeROM do
   """
   def rom(options \\ []) do
     %{
-      fill_prg_rom: fill_prg_rom,
-      fill_chr_rom: fill_chr_rom,
+      fill_prg_rom_start: fill_prg_rom_start,
+      fill_chr_rom_start: fill_chr_rom_start,
       prg_rom_banks_count: prg_rom_banks_count,
       chr_rom_banks_count: chr_rom_banks_count,
       prg_ram_banks_count: prg_ram_banks_count,
@@ -55,11 +55,19 @@ defmodule Belmont.FakeROM do
         <<>>
       end
 
-    prg_data_size = prg_rom_banks_count * 16_384
-    prg_data = for _ <- 1..prg_data_size, into: <<>>, do: <<fill_prg_rom>>
+    prg_data =
+      for i <- 1..prg_rom_banks_count, into: <<>> do
+        for _ <- 1..16_384, into: <<>> do
+          <<fill_prg_rom_start + i - 1>>
+        end
+      end
 
-    chr_data_size = chr_rom_banks_count * 8_192
-    chr_data = for _ <- 1..chr_data_size, into: <<>>, do: <<fill_chr_rom>>
+    chr_data =
+      for i <- 1..chr_rom_banks_count, into: <<>> do
+        for _ <- 1..8_192, into: <<>> do
+          <<fill_chr_rom_start + i - 1>>
+        end
+      end
 
     game_data = trainer_bytes <> prg_data <> chr_data
 

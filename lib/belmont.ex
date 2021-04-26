@@ -4,9 +4,12 @@ defmodule Belmont do
   """
 
   def main(_args \\ []) do
-    Belmont.Cartridge.load_rom("")
+    {:ok, cart} = Belmont.Cartridge.load_rom("nestest/nestest.nes")
+
+    cart
     |> Belmont.Memory.new()
     |> Belmont.CPU.new()
+    |> Map.put(:program_counter, 0xC000)
     |> Belmont.CPU.step()
   end
 end

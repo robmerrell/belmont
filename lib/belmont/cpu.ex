@@ -14,6 +14,7 @@ defmodule Belmont.CPU do
   """
 
   use Bitwise
+  alias Belmont.Memory
 
   @typedoc """
   Defines the CPU state.
@@ -99,7 +100,9 @@ defmodule Belmont.CPU do
   """
   @spec step(t()) :: t()
   def step(cpu) do
-    IO.puts("step")
+    # IO.puts("step")
+    Memory.read_byte(cpu.memory, cpu.program_counter)
+
     cpu
   end
 end

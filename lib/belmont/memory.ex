@@ -35,13 +35,55 @@ defmodule Belmont.Memory do
             ram: {},
             lower_bank: 0,
             upper_bank: 0,
-            mapper: Belmont
+            mapper: Belmont.Mapper.NROM
 
   @doc """
   Creates a new memory manager.
   """
   @spec new(Belmont.Cartridge.t()) :: t()
   def new(cart) do
-    %__MODULE__{cartridge: cart}
+    ram = for(_ <- 0..2048, into: [], do: 0x00) |> List.to_tuple()
+    mapper = Belmont.Mapper.NROM
+
+    %__MODULE__{
+      cartridge: cart,
+      ram: ram,
+      mapper: mapper,
+      lower_bank: mapper.initial_lower_bank(cart),
+      upper_bank: mapper.initial_upper_bank(cart)
+    }
+  end
+
+  @doc """
+  Read a byte from memory at the given location.
+  """
+  @spec read_byte(t(), integer()) :: byte()
+  def read_byte(memory, location) do
+    cond do
+      # read from RAM
+      location < 0x2000 ->
+        elem(memory.ram, rem(location, 0x800))
+
+      location < 0x4000 ->
+        raise "read PPU"
+
+      location == 0x4014 ->
+        raise "read PPU 2"
+
+      location == 0x4015 ->
+        raise "read APU"
+
+      location == 0x4016 ->
+        raise "read controller 1"
+
+      location == 0x4017 ->
+        raise "read controller 2"
+
+      location < 0x6000 ->
+        raise "read IO registers"
+
+      true ->
+        memory.mapper.read_byte(memory, location)
+    end
   end
 end
