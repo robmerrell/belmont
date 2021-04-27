@@ -15,6 +15,7 @@ defmodule Belmont.CPU do
 
   use Bitwise
   alias Belmont.Memory
+  alias Belmont.Hexstr
 
   @typedoc """
   Defines the CPU state.
@@ -39,6 +40,12 @@ defmodule Belmont.CPU do
             registers: %{a: 0x00, x: 0x00, y: 0x00, p: 0x00},
             cycle_count: 0,
             memory: %Belmont.Memory{}
+
+  # Defines all of the opcodes supported by the CPU
+  @opcodes %{
+    # JMP
+    0x4C => %{mnemonic: "JMP", operand_size: :word, executor: &Belmont.CPU.JMP.absolute/1}
+  }
 
   # Defines all of the possible flags available to be set on the status register and the bit
   # where they are located. Bits 3-5 of the status flag are not used in the NES for flags, but
@@ -100,9 +107,60 @@ defmodule Belmont.CPU do
   """
   @spec step(t()) :: t()
   def step(cpu) do
-    # IO.puts("step")
-    Memory.read_byte(cpu.memory, cpu.program_counter)
+    opcode = Memory.read_byte(cpu.memory, cpu.program_counter)
+    opcode_def = @opcodes[opcode]
 
-    cpu
+    if opcode_def == nil,
+      do: raise("Undefined opcode: #{Hexstr.hex(opcode, 2)} at #{Hexstr.hex(cpu.program_counter, 4)}")
+
+    log(cpu, opcode, opcode_def)
+
+    opcode_def[:executor].(cpu)
+    |> step()
+  end
+
+  @doc """
+  Logs an instruction and the current state of the CPU using a format that can be compared
+  against output from nestest logs. We aren't logging the full mnemonic of the instruction,
+  because it isn't needed.
+  """
+  def log(cpu, opcode, opcode_def) do
+    pc = Hexstr.hex(cpu.program_counter, 4)
+    op = Hexstr.hex(opcode, 2)
+    stack_pointer = Hexstr.hex(cpu.stack_pointer, 2)
+
+    operands =
+      case opcode_def[:operand_size] do
+        :byte ->
+          Belmont.Memory.read_byte(cpu.memory, cpu.program_counter + 1) |> Hexstr.hex(2)
+
+        :word ->
+          low_byte = Belmont.Memory.read_byte(cpu.memory, cpu.program_counter + 1) |> Hexstr.hex(2)
+          high_byte = Belmont.Memory.read_byte(cpu.memory, cpu.program_counter + 2) |> Hexstr.hex(2)
+          "#{low_byte} #{high_byte}"
+
+        _ ->
+          ""
+      end
+
+    operands = String.pad_trailing(operands, 6, " ")
+
+    # flags
+    a = Hexstr.hex(cpu.registers[:a], 2)
+    x = Hexstr.hex(cpu.registers[:x], 2)
+    y = Hexstr.hex(cpu.registers[:y], 2)
+    p = Hexstr.hex(cpu.registers[:p], 2)
+    flags = "A:#{a} X:#{x} Y:#{y} P:#{p}"
+
+    mnemonic = String.pad_trailing(opcode_def[:mnemonic], 31, " ")
+
+    cyc =
+      Integer.mod(cpu.cycle_count * 3, 341)
+      |> Integer.to_string()
+      |> String.pad_leading(3, " ")
+
+    "#{pc}  #{op} #{operands} #{mnemonic} #{flags} SP:#{stack_pointer} CYC:#{cyc}"
+    |> String.upcase()
+    |> IO.puts()
   end
 end
