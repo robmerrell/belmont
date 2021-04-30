@@ -62,6 +62,17 @@ defmodule Belmont.Cartridge do
     end
   end
 
+  @doc """
+  Like parse_rom_contents/1, but raises an error.
+  """
+  @spec parse_rom_contents!(binary()) :: t()
+  def parse_rom_contents!(rom) do
+    case parse_rom_contents(rom) do
+      {:ok, cart} -> cart
+      {:error, reason} -> raise "Unable to parse rom contents: #{reason}"
+    end
+  end
+
   # parse out the header of the rom and place it in the struct. We need some of that data to successfully read
   # the game data from the rom
   @spec parse_header(binary()) :: {:ok, t()} | {:error, String.t()}

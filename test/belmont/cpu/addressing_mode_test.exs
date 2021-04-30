@@ -6,17 +6,14 @@ defmodule Belmont.CPU.AddressingModeTest do
   alias Belmont.Cartridge
 
   test "Zero page addressing should return an address pointed to by the program counter + 1 (+ register for indexed)" do
-    {:ok, cart} =
+    cpu =
       FakeROM.rom(
         prg_rom_data_override: [
           [bank: 0, location: 0x0000, value: 0x01],
           [bank: 0, location: 0x0001, value: 0x02]
         ]
       )
-      |> Cartridge.parse_rom_contents()
-
-    cpu =
-      cart
+      |> Cartridge.parse_rom_contents!()
       |> Memory.new()
       |> CPU.new()
       |> CPU.set_register(:x, 0x03)
@@ -40,7 +37,7 @@ defmodule Belmont.CPU.AddressingModeTest do
   end
 
   test "Absolute addressing should return an address pointed to by the program counter + 1 (+ register for indexed)" do
-    {:ok, cart} =
+    cpu =
       FakeROM.rom(
         prg_rom_data_override: [
           [bank: 0, location: 0x0000, value: 0x01],
@@ -48,10 +45,7 @@ defmodule Belmont.CPU.AddressingModeTest do
           [bank: 0, location: 0x0002, value: 0x03]
         ]
       )
-      |> Cartridge.parse_rom_contents()
-
-    cpu =
-      cart
+      |> Cartridge.parse_rom_contents!()
       |> Memory.new()
       |> CPU.new()
       |> CPU.set_register(:x, 0x03)
@@ -75,7 +69,7 @@ defmodule Belmont.CPU.AddressingModeTest do
   end
 
   test "Indirect addressing should return an indirect address" do
-    {:ok, cart} =
+    cpu =
       FakeROM.rom(
         prg_rom_data_override: [
           [bank: 0, location: 0x0000, value: 0x01],
@@ -85,10 +79,7 @@ defmodule Belmont.CPU.AddressingModeTest do
           [bank: 0, location: 0x0004, value: 0x31]
         ]
       )
-      |> Cartridge.parse_rom_contents()
-
-    cpu =
-      cart
+      |> Cartridge.parse_rom_contents!()
       |> Memory.new()
       |> CPU.new()
       |> Map.put(:program_counter, 0x8000)
@@ -99,7 +90,7 @@ defmodule Belmont.CPU.AddressingModeTest do
   end
 
   test "immediate addressing should return the address after the program counter" do
-    {:ok, cart} =
+    cpu =
       FakeROM.rom(
         prg_rom_data_override: [
           [bank: 0, location: 0x0000, value: 0x01],
@@ -107,10 +98,7 @@ defmodule Belmont.CPU.AddressingModeTest do
           [bank: 0, location: 0x0002, value: 0x03]
         ]
       )
-      |> Cartridge.parse_rom_contents()
-
-    cpu =
-      cart
+      |> Cartridge.parse_rom_contents!()
       |> Memory.new()
       |> CPU.new()
       |> CPU.set_register(:x, 0x03)
@@ -124,17 +112,14 @@ defmodule Belmont.CPU.AddressingModeTest do
   end
 
   test "relative address should return the correct address and consider the byte signed" do
-    {:ok, cart} =
+    cpu =
       FakeROM.rom(
         prg_rom_data_override: [
           [bank: 0, location: 0x0000, value: 0x01],
           [bank: 0, location: 0x0001, value: 0x02]
         ]
       )
-      |> Cartridge.parse_rom_contents()
-
-    cpu =
-      cart
+      |> Cartridge.parse_rom_contents!()
       |> Memory.new()
       |> CPU.new()
       |> Map.put(:program_counter, 0x8000)
@@ -143,17 +128,14 @@ defmodule Belmont.CPU.AddressingModeTest do
     assert address.address == 0x8004
     assert address.page_crossed == false
 
-    {:ok, cart} =
+    cpu =
       FakeROM.rom(
         prg_rom_data_override: [
           [bank: 0, location: 0x0000, value: 0x01],
           [bank: 0, location: 0x0001, value: 0x82]
         ]
       )
-      |> Cartridge.parse_rom_contents()
-
-    cpu =
-      cart
+      |> Cartridge.parse_rom_contents!()
       |> Memory.new()
       |> CPU.new()
       |> Map.put(:program_counter, 0x8000)
