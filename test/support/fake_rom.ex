@@ -1,11 +1,12 @@
 defmodule Belmont.FakeROM do
   @defaults %{
+    prg_rom_data_override: [],
     fill_prg_rom_start: 0x00,
     fill_chr_rom_start: 0x00,
     prg_rom_banks_count: 1,
     chr_rom_banks_count: 1,
     prg_ram_banks_count: 1,
-    mapper: 2,
+    mapper: 0,
     mirroring_mode: :horizontal,
     battery_backed_ram: 0,
     trainer_present: 0
@@ -17,6 +18,7 @@ defmodule Belmont.FakeROM do
   def rom(options \\ []) do
     %{
       fill_prg_rom_start: fill_prg_rom_start,
+      prg_rom_data_override: prg_rom_data_override,
       fill_chr_rom_start: fill_chr_rom_start,
       prg_rom_banks_count: prg_rom_banks_count,
       chr_rom_banks_count: chr_rom_banks_count,
@@ -57,8 +59,17 @@ defmodule Belmont.FakeROM do
 
     prg_data =
       for i <- 1..prg_rom_banks_count, into: <<>> do
-        for _ <- 1..16_384, into: <<>> do
-          <<fill_prg_rom_start + i - 1>>
+        for byte_loc <- 1..16_384, into: <<>> do
+          override =
+            Enum.find(prg_rom_data_override, fn x ->
+              x[:bank] == i - 1 && x[:location] == byte_loc - 1
+            end)
+
+          if override == nil do
+            <<fill_prg_rom_start + i - 1>>
+          else
+            <<override[:value]>>
+          end
         end
       end
 
