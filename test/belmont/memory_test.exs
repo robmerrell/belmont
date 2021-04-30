@@ -29,4 +29,15 @@ defmodule Belmont.MemoryTest do
       assert 0xF0 == %Memory{ram: test_ram} |> Memory.read_byte(0x1800)
     end
   end
+
+  describe "read_word/2" do
+    test "should be able to read a word from memory" do
+      mem =
+        %Memory{ram: for(_ <- 0..2048, into: [], do: 0x00) |> List.to_tuple()}
+        |> Memory.write_byte(0x0000, 0x31)
+        |> Memory.write_byte(0x0001, 0x32)
+
+      assert 0x3231 == Memory.read_word(mem, 0x0000)
+    end
+  end
 end
