@@ -21,8 +21,8 @@ defmodule Belmont.CPU do
   Defines the CPU state.
   * :program_counter - A 16-bit register that points to the current instruction to be processed by the CPU.
   * :stack_pointer - An 8-bit register that points at the *TOP* of the stack. The stack is located from $0100-01FF,
-                     so the stack pointer works as an offset pointing between the beginning and ending memory locations.
-                     The stack is top-down, so the stack pointer is decremented when a byte is pushed onto the stack.
+    so the stack pointer works as an offset pointing between the beginning and ending memory locations.
+    The stack is top-down, so the stack pointer is decremented when a byte is pushed onto the stack.
   * :registers - CPU registers.
   * :cycle_count - Counts the number of CPU cycles used during execution. This is our primary mechanism for pacing.
   * :memory - Memory struct.
