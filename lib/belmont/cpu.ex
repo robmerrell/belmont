@@ -14,6 +14,7 @@ defmodule Belmont.CPU do
   """
 
   use Bitwise
+  alias Belmont.CPU.AddressingMode
   alias Belmont.Memory
   alias Belmont.Hexstr
 
@@ -36,16 +37,10 @@ defmodule Belmont.CPU do
         }
 
   defstruct program_counter: 0x0000,
-            stack_pointer: 0x00,
-            registers: %{a: 0x00, x: 0x00, y: 0x00, p: 0x00},
+            stack_pointer: 0xFD,
+            registers: %{a: 0x00, x: 0x00, y: 0x00, p: 0x24},
             cycle_count: 0,
             memory: %Belmont.Memory{}
-
-  # Defines all of the opcodes supported by the CPU
-  @opcodes %{
-    # JMP
-    0x4C => %{mnemonic: "JMP", operand_size: :word, executor: &Belmont.CPU.JMP.absolute/1}
-  }
 
   # Defines all of the possible flags available to be set on the status register and the bit
   # where they are located. Bits 3-5 of the status flag are not used in the NES for flags, but
@@ -85,6 +80,17 @@ defmodule Belmont.CPU do
   end
 
   @doc """
+  Set or unset the given flag using a test byte to determine the flag's state
+  """
+  def set_flag_with_test(cpu, :zero, test_byte) do
+    if test_byte == 0, do: set_flag(cpu, :zero), else: unset_flag(cpu, :zero)
+  end
+
+  def set_flag_with_test(cpu, :negative, test_byte) do
+    if band(test_byte, 0x80) != 0, do: set_flag(cpu, :negative), else: unset_flag(cpu, :negative)
+  end
+
+  @doc """
   Unset the given flag on the status register.
   """
   @spec unset_flag(t(), atom()) :: t()
@@ -108,29 +114,23 @@ defmodule Belmont.CPU do
   @spec step(t()) :: t()
   def step(cpu) do
     opcode = Memory.read_byte(cpu.memory, cpu.program_counter)
-    opcode_def = @opcodes[opcode]
 
-    if opcode_def == nil,
-      do: raise("Undefined opcode: #{Hexstr.hex(opcode, 2)} at #{Hexstr.hex(cpu.program_counter, 4)}")
+    log(cpu, opcode)
 
-    log(cpu, opcode, opcode_def)
-
-    opcode_def[:executor].(cpu)
+    execute(cpu, opcode)
     |> step()
   end
 
-  @doc """
-  Logs an instruction and the current state of the CPU using a format that can be compared
-  against output from nestest logs. We aren't logging the full mnemonic of the instruction,
-  because it isn't needed.
-  """
-  def log(cpu, opcode, opcode_def) do
+  # Logs an instruction and the current state of the CPU using a format that can be compared
+  # against output from nestest logs. We aren't logging the full mnemonic of the instruction,
+  # because it isn't needed.
+  defp log_state(cpu, opcode, mnemonic, operand_size) do
     pc = Hexstr.hex(cpu.program_counter, 4)
     op = Hexstr.hex(opcode, 2)
     stack_pointer = Hexstr.hex(cpu.stack_pointer, 2)
 
     operands =
-      case opcode_def[:operand_size] do
+      case operand_size do
         :byte ->
           Belmont.Memory.read_byte(cpu.memory, cpu.program_counter + 1) |> Hexstr.hex(2)
 
@@ -152,7 +152,7 @@ defmodule Belmont.CPU do
     p = Hexstr.hex(cpu.registers[:p], 2)
     flags = "A:#{a} X:#{x} Y:#{y} P:#{p}"
 
-    mnemonic = String.pad_trailing(opcode_def[:mnemonic], 31, " ")
+    mnemonic = String.pad_trailing(mnemonic, 31, " ")
 
     cyc =
       Integer.mod(cpu.cycle_count * 3, 341)
@@ -162,5 +162,37 @@ defmodule Belmont.CPU do
     "#{pc}  #{op} #{operands} #{mnemonic} #{flags} SP:#{stack_pointer} CYC:#{cyc}"
     |> String.upcase()
     |> IO.puts()
+  end
+
+  # instruction logging
+  defp log(cpu, 0x4C), do: log_state(cpu, 0x4C, "JMP", :word)
+  defp log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
+  defp log(cpu, opcode), do: log_state(cpu, opcode, "UNDEF", :none)
+
+  # instruction execution
+  defp execute(cpu, 0x4C), do: jmp(cpu, :absolute)
+  defp execute(cpu, 0xA2), do: ldx(cpu, :immediate)
+
+  defp execute(cpu, opcode) do
+    raise("Undefined opcode: #{Hexstr.hex(opcode, 2)} at #{Hexstr.hex(cpu.program_counter, 4)}")
+  end
+
+  # read a word and set the program counter to that value
+  def jmp(cpu, addressing_mode) do
+    address = AddressingMode.get_address(addressing_mode, cpu)
+    %{cpu | program_counter: address.address, cycle_count: cpu.cycle_count + 3}
+  end
+
+  # load value read at address into the :x register
+  def ldx(cpu, addressing_mode) do
+    byte_address = AddressingMode.get_address(addressing_mode, cpu)
+    byte = Memory.read_byte(cpu.memory, byte_address.address)
+
+    cpu
+    |> set_register(:x, byte)
+    |> set_flag_with_test(:zero, byte)
+    |> set_flag_with_test(:negative, byte)
+    |> Map.put(:program_counter, cpu.program_counter + 2)
+    |> Map.put(:cycle_count, cpu.cycle_count + 2)
   end
 end
