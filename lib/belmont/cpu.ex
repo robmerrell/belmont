@@ -114,11 +114,8 @@ defmodule Belmont.CPU do
   @spec step(t()) :: t()
   def step(cpu) do
     opcode = Memory.read_byte(cpu.memory, cpu.program_counter)
-
-    log(cpu, opcode)
-
     execute(cpu, opcode)
-    |> step()
+    # |> step()
   end
 
   # Logs an instruction and the current state of the CPU using a format that can be compared
@@ -161,16 +158,17 @@ defmodule Belmont.CPU do
 
     "#{pc}  #{op} #{operands} #{mnemonic} #{flags} SP:#{stack_pointer} CYC:#{cyc}"
     |> String.upcase()
-    |> IO.puts()
   end
 
   # instruction logging
-  defp log(cpu, 0x4C), do: log_state(cpu, 0x4C, "JMP", :word)
-  defp log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
-  defp log(cpu, opcode), do: log_state(cpu, opcode, "UNDEF", :none)
+  def log(cpu, 0x4C), do: log_state(cpu, 0x4C, "JMP", :word)
+  def log(cpu, 0x86), do: log_state(cpu, 0x86, "STX", :byte)
+  def log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
+  def log(cpu, opcode), do: log_state(cpu, opcode, "UNDEF", :none)
 
   # instruction execution
   defp execute(cpu, 0x4C), do: jmp(cpu, :absolute)
+  defp execute(cpu, 0x86), do: stx(cpu, :zero_page)
   defp execute(cpu, 0xA2), do: ldx(cpu, :immediate)
 
   defp execute(cpu, opcode) do
@@ -180,7 +178,13 @@ defmodule Belmont.CPU do
   # read a word and set the program counter to that value
   def jmp(cpu, addressing_mode) do
     address = AddressingMode.get_address(addressing_mode, cpu)
-    %{cpu | program_counter: address.address, cycle_count: cpu.cycle_count + 3}
+
+    {pc, cycle} =
+      case addressing_mode do
+        :absolute -> {address.address, 3}
+      end
+
+    %{cpu | program_counter: pc, cycle_count: cpu.cycle_count + cycle}
   end
 
   # load value read at address into the :x register
@@ -188,11 +192,35 @@ defmodule Belmont.CPU do
     byte_address = AddressingMode.get_address(addressing_mode, cpu)
     byte = Memory.read_byte(cpu.memory, byte_address.address)
 
+    {pc, cycle} =
+      case addressing_mode do
+        :immediate -> {2, 2}
+        :zero_page -> {2, 3}
+        :zero_page_y -> {2, 4}
+        :absolute -> {3, 4}
+        :absolute_y -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
+      end
+
     cpu
     |> set_register(:x, byte)
     |> set_flag_with_test(:zero, byte)
     |> set_flag_with_test(:negative, byte)
-    |> Map.put(:program_counter, cpu.program_counter + 2)
-    |> Map.put(:cycle_count, cpu.cycle_count + 2)
+    |> Map.put(:program_counter, cpu.program_counter + pc)
+    |> Map.put(:cycle_count, cpu.cycle_count + cycle)
+  end
+
+  # stores the contents of the :x register into memory
+  def stx(cpu, addressing_mode) do
+    address = AddressingMode.get_address(addressing_mode, cpu)
+    memory = Memory.write_byte(cpu.memory, address.address, cpu.registers.x)
+
+    {pc, cycle} =
+      case addressing_mode do
+        :zero_page -> {2, 3}
+        :zero_page_y -> {2, 4}
+        :absolute -> {2, 4}
+      end
+
+    %{cpu | memory: memory, program_counter: cpu.program_counter + pc, cycle_count: cpu.cycle_count + cycle}
   end
 end

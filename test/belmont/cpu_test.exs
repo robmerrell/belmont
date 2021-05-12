@@ -120,4 +120,24 @@ defmodule Belmont.CPUTest do
       assert CPU.flag_set?(cpu, :zero) == true
     end
   end
+
+  describe "stx/2" do
+    test "stores the x register in memory" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0000, value: 0x86],
+            [bank: 0, location: 0x0001, value: 0x00]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.set_register(:x, 0x31)
+        |> CPU.stx(:zero_page)
+
+      assert Memory.read_byte(cpu.memory, 0x0000) == 0x31
+    end
+  end
 end
