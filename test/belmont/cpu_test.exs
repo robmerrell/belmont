@@ -124,6 +124,43 @@ defmodule Belmont.CPUTest do
     end
   end
 
+  describe "lda/2" do
+    setup do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0000, value: 0xA2],
+            [bank: 0, location: 0x0001, value: 0x75],
+            [bank: 0, location: 0x0002, value: 0xA2],
+            [bank: 0, location: 0x0003, value: 0xFF],
+            [bank: 0, location: 0x0004, value: 0xA2],
+            [bank: 0, location: 0x0005, value: 0x00]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> Map.put(:program_counter, 0x8000)
+
+      {:ok, cpu: cpu}
+    end
+
+    test "reads a value from memory and sets it to the accumulator", %{cpu: cpu} do
+      cpu = CPU.lda(cpu, :immediate)
+      assert cpu.registers.a == 0x75
+    end
+
+    test "sets the negative flag", %{cpu: cpu} do
+      cpu = Map.put(cpu, :program_counter, 0x8002) |> CPU.lda(:immediate)
+      assert CPU.flag_set?(cpu, :negative) == true
+    end
+
+    test "sets the zero flag", %{cpu: cpu} do
+      cpu = Map.put(cpu, :program_counter, 0x8004) |> CPU.lda(:immediate)
+      assert CPU.flag_set?(cpu, :zero) == true
+    end
+  end
+
   describe "ldx/2" do
     setup do
       cpu =

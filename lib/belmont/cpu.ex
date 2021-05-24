@@ -202,6 +202,7 @@ defmodule Belmont.CPU do
   def log(cpu, 0x86), do: log_state(cpu, 0x86, "STX", :byte)
   def log(cpu, 0x90), do: log_state(cpu, 0x90, "BCC", :byte)
   def log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
+  def log(cpu, 0xA9), do: log_state(cpu, 0xA9, "LDA", :byte)
   def log(cpu, 0xB0), do: log_state(cpu, 0xB0, "BCS", :byte)
   def log(cpu, 0xEA), do: log_state(cpu, 0xEA, "NOP", :none)
   def log(cpu, opcode), do: log_state(cpu, opcode, "UNDEF", :none)
@@ -214,6 +215,7 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0x86), do: stx(cpu, :zero_page)
   defp execute(cpu, 0x90), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :carry) end)
   defp execute(cpu, 0xA2), do: ldx(cpu, :immediate)
+  defp execute(cpu, 0xA9), do: lda(cpu, :immediate)
   defp execute(cpu, 0xB0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :carry) end)
   defp execute(cpu, 0xEA), do: nop(cpu, :implied)
 
@@ -251,6 +253,31 @@ defmodule Belmont.CPU do
       end
 
     %{cpu | program_counter: pc, cycle_count: cpu.cycle_count + cycle}
+  end
+
+  # load value read at address into the accumuilator
+  def lda(cpu, addressing_mode) do
+    byte_address = AddressingMode.get_address(addressing_mode, cpu)
+    byte = Memory.read_byte(cpu.memory, byte_address.address)
+
+    {pc, cycle} =
+      case addressing_mode do
+        :immediate -> {2, 2}
+        :zero_page -> {2, 3}
+        :zero_page_x -> {2, 4}
+        :absolute -> {3, 4}
+        :absolute_x -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
+        :absolute_y -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
+        :indirect_x -> {2, 6}
+        :indirect_y -> if byte_address.page_crossed, do: {2, 5}, else: {2, 6}
+      end
+
+    cpu
+    |> set_register(:a, byte)
+    |> set_flag_with_test(:zero, byte)
+    |> set_flag_with_test(:negative, byte)
+    |> Map.put(:program_counter, cpu.program_counter + pc)
+    |> Map.put(:cycle_count, cpu.cycle_count + cycle)
   end
 
   # load value read at address into the :x register
