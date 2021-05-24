@@ -196,6 +196,7 @@ defmodule Belmont.CPU do
 
   # instruction logging
   def log(cpu, 0x20), do: log_state(cpu, 0x20, "JSR", :word)
+  def log(cpu, 0x38), do: log_state(cpu, 0x38, "SEC", :none)
   def log(cpu, 0x4C), do: log_state(cpu, 0x4C, "JMP", :word)
   def log(cpu, 0x86), do: log_state(cpu, 0x86, "STX", :byte)
   def log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
@@ -204,6 +205,7 @@ defmodule Belmont.CPU do
 
   # instruction execution
   defp execute(cpu, 0x20), do: jsr(cpu, :absolute)
+  defp execute(cpu, 0x38), do: set_flag_op(cpu, :carry)
   defp execute(cpu, 0x4C), do: jmp(cpu, :absolute)
   defp execute(cpu, 0x86), do: stx(cpu, :zero_page)
   defp execute(cpu, 0xA2), do: ldx(cpu, :immediate)
@@ -215,6 +217,14 @@ defmodule Belmont.CPU do
 
   def nop(cpu, :implied) do
     %{cpu | program_counter: cpu.program_counter + 1, cycle_count: cpu.cycle_count + 2}
+  end
+
+  # set a flag to 1
+  def set_flag_op(cpu, flag) do
+    cpu
+    |> set_flag(flag)
+    |> Map.put(:program_counter, cpu.program_counter + 1)
+    |> Map.put(:cycle_count, cpu.cycle_count + 2)
   end
 
   # read a word and set the program counter to that value
