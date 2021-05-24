@@ -204,7 +204,9 @@ defmodule Belmont.CPU do
   def log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
   def log(cpu, 0xA9), do: log_state(cpu, 0xA9, "LDA", :byte)
   def log(cpu, 0xB0), do: log_state(cpu, 0xB0, "BCS", :byte)
+  def log(cpu, 0xD0), do: log_state(cpu, 0xD0, "BNE", :byte)
   def log(cpu, 0xEA), do: log_state(cpu, 0xEA, "NOP", :none)
+  def log(cpu, 0xF0), do: log_state(cpu, 0xF0, "BEQ", :byte)
   def log(cpu, opcode), do: log_state(cpu, opcode, "UNDEF", :none)
 
   # instruction execution
@@ -217,7 +219,9 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0xA2), do: ldx(cpu, :immediate)
   defp execute(cpu, 0xA9), do: lda(cpu, :immediate)
   defp execute(cpu, 0xB0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :carry) end)
+  defp execute(cpu, 0xD0), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :zero) end)
   defp execute(cpu, 0xEA), do: nop(cpu, :implied)
+  defp execute(cpu, 0xF0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :zero) end)
 
   defp execute(cpu, opcode) do
     raise("Undefined opcode: #{Hexstr.hex(opcode, 2)} at #{Hexstr.hex(cpu.program_counter, 4)}")
