@@ -199,6 +199,7 @@ defmodule Belmont.CPU do
   def log(cpu, 0x20), do: log_state(cpu, 0x20, "JSR", :word)
   def log(cpu, 0x38), do: log_state(cpu, 0x38, "SEC", :none)
   def log(cpu, 0x4C), do: log_state(cpu, 0x4C, "JMP", :word)
+  def log(cpu, 0x85), do: log_state(cpu, 0x85, "STA", :byte)
   def log(cpu, 0x86), do: log_state(cpu, 0x86, "STX", :byte)
   def log(cpu, 0x90), do: log_state(cpu, 0x90, "BCC", :byte)
   def log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
@@ -214,6 +215,7 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0x20), do: jsr(cpu, :absolute)
   defp execute(cpu, 0x38), do: set_flag_op(cpu, :carry)
   defp execute(cpu, 0x4C), do: jmp(cpu, :absolute)
+  defp execute(cpu, 0x85), do: sta(cpu, :zero_page)
   defp execute(cpu, 0x86), do: stx(cpu, :zero_page)
   defp execute(cpu, 0x90), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :carry) end)
   defp execute(cpu, 0xA2), do: ldx(cpu, :immediate)
@@ -272,8 +274,8 @@ defmodule Belmont.CPU do
         :absolute -> {3, 4}
         :absolute_x -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
         :absolute_y -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
-        :indirect_x -> {2, 6}
-        :indirect_y -> if byte_address.page_crossed, do: {2, 5}, else: {2, 6}
+        :indexed_indirect -> {2, 6}
+        :indirect_indexed -> if byte_address.page_crossed, do: {2, 5}, else: {2, 6}
       end
 
     cpu
@@ -304,6 +306,25 @@ defmodule Belmont.CPU do
     |> set_flag_with_test(:negative, byte)
     |> Map.put(:program_counter, cpu.program_counter + pc)
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
+  end
+
+  # stores the contents of the accumulator into memory
+  def sta(cpu, addressing_mode) do
+    address = AddressingMode.get_address(addressing_mode, cpu)
+    memory = Memory.write_byte(cpu.memory, address.address, cpu.registers.a)
+
+    {pc, cycle} =
+      case addressing_mode do
+        :zero_page -> {2, 3}
+        :zero_page_x -> {2, 4}
+        :absolute -> {3, 4}
+        :absolute_x -> {3, 5}
+        :absolute_y -> {3, 5}
+        :indexed_indirect -> {2, 6}
+        :indirect_indexed -> {2, 6}
+      end
+
+    %{cpu | memory: memory, program_counter: cpu.program_counter + pc, cycle_count: cpu.cycle_count + cycle}
   end
 
   # stores the contents of the :x register into memory
