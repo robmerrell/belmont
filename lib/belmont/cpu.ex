@@ -195,20 +195,26 @@ defmodule Belmont.CPU do
   end
 
   # instruction logging
+  def log(cpu, 0x18), do: log_state(cpu, 0x18, "CLC", :none)
   def log(cpu, 0x20), do: log_state(cpu, 0x20, "JSR", :word)
   def log(cpu, 0x38), do: log_state(cpu, 0x38, "SEC", :none)
   def log(cpu, 0x4C), do: log_state(cpu, 0x4C, "JMP", :word)
   def log(cpu, 0x86), do: log_state(cpu, 0x86, "STX", :byte)
+  def log(cpu, 0x90), do: log_state(cpu, 0x90, "BCC", :byte)
   def log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
+  def log(cpu, 0xB0), do: log_state(cpu, 0xB0, "BCS", :byte)
   def log(cpu, 0xEA), do: log_state(cpu, 0xEA, "NOP", :none)
   def log(cpu, opcode), do: log_state(cpu, opcode, "UNDEF", :none)
 
   # instruction execution
+  defp execute(cpu, 0x18), do: unset_flag_op(cpu, :carry)
   defp execute(cpu, 0x20), do: jsr(cpu, :absolute)
   defp execute(cpu, 0x38), do: set_flag_op(cpu, :carry)
   defp execute(cpu, 0x4C), do: jmp(cpu, :absolute)
   defp execute(cpu, 0x86), do: stx(cpu, :zero_page)
+  defp execute(cpu, 0x90), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :carry) end)
   defp execute(cpu, 0xA2), do: ldx(cpu, :immediate)
+  defp execute(cpu, 0xB0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :carry) end)
   defp execute(cpu, 0xEA), do: nop(cpu, :implied)
 
   defp execute(cpu, opcode) do
@@ -223,6 +229,14 @@ defmodule Belmont.CPU do
   def set_flag_op(cpu, flag) do
     cpu
     |> set_flag(flag)
+    |> Map.put(:program_counter, cpu.program_counter + 1)
+    |> Map.put(:cycle_count, cpu.cycle_count + 2)
+  end
+
+  # set a flag to 0
+  def unset_flag_op(cpu, flag) do
+    cpu
+    |> unset_flag(flag)
     |> Map.put(:program_counter, cpu.program_counter + 1)
     |> Map.put(:cycle_count, cpu.cycle_count + 2)
   end
@@ -281,5 +295,16 @@ defmodule Belmont.CPU do
     byte_address = AddressingMode.get_address(addressing_mode, cpu)
     cpu = push_word_onto_stack(cpu, cpu.program_counter + 2)
     %{cpu | program_counter: byte_address.address, cycle_count: cpu.cycle_count + 6}
+  end
+
+  # branch if the given function evaluates to true
+  def branch_if(cpu, fun) do
+    if fun.(cpu) do
+      byte_address = AddressingMode.get_address(:relative, cpu)
+      cycles = if byte_address.page_crossed, do: 4, else: 3
+      %{cpu | program_counter: byte_address.address, cycle_count: cpu.cycle_count + cycles}
+    else
+      %{cpu | program_counter: cpu.program_counter + 2, cycle_count: cpu.cycle_count + 2}
+    end
   end
 end
