@@ -63,6 +63,46 @@ defmodule Belmont.CPUTest do
     end
   end
 
+  describe "The stack" do
+    setup do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0000, value: 0x4C],
+            [bank: 0, location: 0x0001, value: 0xF5],
+            [bank: 0, location: 0x0002, value: 0xC5]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> Map.put(:program_counter, 0x8000)
+
+      {:ok, cpu: cpu}
+    end
+
+    test "A byte can be pushed", %{cpu: cpu} do
+      cpu = CPU.push_byte_onto_stack(cpu, 0x31)
+      assert Memory.read_byte(cpu.memory, 0x1FD) == 0x31
+      assert cpu.stack_pointer == 0xFC
+    end
+
+    test "A word can be pushed", %{cpu: cpu} do
+      cpu = CPU.push_word_onto_stack(cpu, 0xC5D1)
+      assert Memory.read_byte(cpu.memory, 0x1FD) == 0xC5
+      assert Memory.read_byte(cpu.memory, 0x1FC) == 0xD1
+      assert cpu.stack_pointer == 0xFB
+    end
+
+    test "A byte can be popped off", %{cpu: cpu} do
+      assert {cpu, 0x31} =
+               CPU.push_byte_onto_stack(cpu, 0x31)
+               |> CPU.pop_byte_off_stack()
+
+      assert cpu.stack_pointer == 0xFD
+    end
+  end
+
   describe "jmp/2" do
     test "jumps to the location read in memory" do
       cpu =
@@ -138,6 +178,27 @@ defmodule Belmont.CPUTest do
         |> CPU.stx(:zero_page)
 
       assert Memory.read_byte(cpu.memory, 0x0000) == 0x31
+    end
+  end
+
+  describe "jsr/2" do
+    test "should push the return point onto the stack and jump to a location" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0001, value: 0x2D],
+            [bank: 0, location: 0x0002, value: 0xC7]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.jsr(:absolute)
+
+      assert cpu.program_counter == 0xC72D
+      assert {cpu, 0x02} = CPU.pop_byte_off_stack(cpu)
+      assert {_cpu, 0x80} = CPU.pop_byte_off_stack(cpu)
     end
   end
 end

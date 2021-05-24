@@ -109,6 +109,40 @@ defmodule Belmont.CPU do
   end
 
   @doc """
+  Pushes a byte onto the stack.
+  """
+  @spec push_byte_onto_stack(t(), byte()) :: t()
+  def push_byte_onto_stack(cpu, byte) do
+    memory = Memory.write_byte(cpu.memory, 0x100 + cpu.stack_pointer, byte)
+    # simulate byte overflow
+    wrapped_stack_pointer = Integer.mod(cpu.stack_pointer - 1, 256)
+
+    %{cpu | memory: memory, stack_pointer: wrapped_stack_pointer}
+  end
+
+  @doc """
+  Pushes a word onto a stack by writing each byte individually.
+  """
+  @spec push_word_onto_stack(t(), integer()) :: t()
+  def push_word_onto_stack(cpu, word) do
+    <<high_byte, low_byte>> = <<word::size(16)>>
+
+    cpu
+    |> push_byte_onto_stack(high_byte)
+    |> push_byte_onto_stack(low_byte)
+  end
+
+  @doc """
+  Pops a byte off of the stack.
+  """
+  @spec pop_byte_off_stack(t()) :: {t(), byte()}
+  def pop_byte_off_stack(cpu) do
+    wrapped_stack_pointer = Integer.mod(cpu.stack_pointer + 1, 256)
+    byte = Memory.read_byte(cpu.memory, 0x100 + wrapped_stack_pointer)
+    {%{cpu | stack_pointer: wrapped_stack_pointer}, byte}
+  end
+
+  @doc """
   Process the current instruction pointed at by the program counter.
   """
   @spec step(t()) :: t()
@@ -161,18 +195,26 @@ defmodule Belmont.CPU do
   end
 
   # instruction logging
+  def log(cpu, 0x20), do: log_state(cpu, 0x20, "JSR", :word)
   def log(cpu, 0x4C), do: log_state(cpu, 0x4C, "JMP", :word)
   def log(cpu, 0x86), do: log_state(cpu, 0x86, "STX", :byte)
   def log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
+  def log(cpu, 0xEA), do: log_state(cpu, 0xEA, "NOP", :none)
   def log(cpu, opcode), do: log_state(cpu, opcode, "UNDEF", :none)
 
   # instruction execution
+  defp execute(cpu, 0x20), do: jsr(cpu, :absolute)
   defp execute(cpu, 0x4C), do: jmp(cpu, :absolute)
   defp execute(cpu, 0x86), do: stx(cpu, :zero_page)
   defp execute(cpu, 0xA2), do: ldx(cpu, :immediate)
+  defp execute(cpu, 0xEA), do: nop(cpu, :implied)
 
   defp execute(cpu, opcode) do
     raise("Undefined opcode: #{Hexstr.hex(opcode, 2)} at #{Hexstr.hex(cpu.program_counter, 4)}")
+  end
+
+  def nop(cpu, :implied) do
+    %{cpu | program_counter: cpu.program_counter + 1, cycle_count: cpu.cycle_count + 2}
   end
 
   # read a word and set the program counter to that value
@@ -222,5 +264,12 @@ defmodule Belmont.CPU do
       end
 
     %{cpu | memory: memory, program_counter: cpu.program_counter + pc, cycle_count: cpu.cycle_count + cycle}
+  end
+
+  # push the address (minus one) of the return point to the stack and set the program counter to the memory address
+  def jsr(cpu, addressing_mode) do
+    byte_address = AddressingMode.get_address(addressing_mode, cpu)
+    cpu = push_word_onto_stack(cpu, cpu.program_counter + 2)
+    %{cpu | program_counter: byte_address.address, cycle_count: cpu.cycle_count + 6}
   end
 end
