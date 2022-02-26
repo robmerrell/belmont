@@ -61,6 +61,28 @@ defmodule Belmont.CPUTest do
       assert cpu.registers.x == 0xF1
       assert cpu.registers.y == 0xA2
     end
+
+    test "set_flag_with_test will either set or unset the flag based on the test byte" do
+      cpu =
+        %CPU{}
+        |> CPU.set_flag_with_test(:zero, 0x00)
+        |> CPU.set_flag_with_test(:negative, 0b00000000)
+        |> CPU.set_flag_with_test(:overflow, 0b00000000)
+
+      assert CPU.flag_set?(cpu, :zero)
+      assert !CPU.flag_set?(cpu, :overflow)
+      assert !CPU.flag_set?(cpu, :negative)
+
+      cpu =
+        %CPU{}
+        |> CPU.set_flag_with_test(:zero, 0x01)
+        |> CPU.set_flag_with_test(:negative, 0b10000000)
+        |> CPU.set_flag_with_test(:overflow, 0b01000000)
+
+      assert !CPU.flag_set?(cpu, :zero)
+      assert CPU.flag_set?(cpu, :negative)
+      assert CPU.flag_set?(cpu, :overflow)
+    end
   end
 
   describe "The stack" do
@@ -121,6 +143,51 @@ defmodule Belmont.CPUTest do
 
       assert cpu.program_counter == 0xC5F5
       assert cpu.cycle_count == 3
+    end
+  end
+
+  describe "bit/2" do
+    setup do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0000, value: 0x24],
+            [bank: 0, location: 0x0001, value: 0xFF],
+            [bank: 0, location: 0x0002, value: 0x00]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> Map.put(:program_counter, 0x8000)
+
+      {:ok, cpu: cpu}
+    end
+
+    test "sets negative and overflow flags", %{cpu: cpu} do
+      mem = Memory.write_byte(cpu.memory, 0x00FF, 0xFF)
+
+      cpu =
+        cpu
+        |> CPU.set_register(:a, 0xFF)
+        |> Map.put(:memory, mem)
+        |> CPU.bit(:zero_page)
+
+      assert CPU.flag_set?(cpu, :negative)
+      assert CPU.flag_set?(cpu, :overflow)
+      assert !CPU.flag_set?(cpu, :zero)
+    end
+
+    test "sets the zero flag", %{cpu: cpu} do
+      mem = Memory.write_byte(cpu.memory, 0x00FF, 0xFF)
+
+      cpu =
+        cpu
+        |> CPU.set_register(:a, 0x00)
+        |> Map.put(:memory, mem)
+        |> CPU.bit(:zero_page)
+
+      assert CPU.flag_set?(cpu, :zero)
     end
   end
 

@@ -2,7 +2,7 @@ defmodule Belmont.CPU do
   @moduledoc """
   The cpu represents everything we need to emulate the NES CPU. The NES' CPU is a variation of the 6502
   processor that runs at 1.79 MHz (PAL regions is 1.66 MHz). One of the differences between the NES' CPU and the standard
-  MOS6502 is that the NES does not have a decimal mode. Saving us a bit of work. The CPU is little endian.
+  MOS6502 is that the NES does not have a decimal mode, saving us a bit of work. The CPU is little endian.
 
   The NES CPU has 4 work registers (excluding program_counter and the stack_pointer). All 4 registers
   are a byte wide.
@@ -88,6 +88,10 @@ defmodule Belmont.CPU do
 
   def set_flag_with_test(cpu, :negative, test_byte) do
     if band(test_byte, 0x80) != 0, do: set_flag(cpu, :negative), else: unset_flag(cpu, :negative)
+  end
+
+  def set_flag_with_test(cpu, :overflow, test_byte) do
+    if band(test_byte, 0x70) != 0, do: set_flag(cpu, :overflow), else: unset_flag(cpu, :overflow)
   end
 
   @doc """
@@ -197,6 +201,8 @@ defmodule Belmont.CPU do
   # instruction logging
   def log(cpu, 0x18), do: log_state(cpu, 0x18, "CLC", :none)
   def log(cpu, 0x20), do: log_state(cpu, 0x20, "JSR", :word)
+  def log(cpu, 0x24), do: log_state(cpu, 0x24, "BIT", :byte)
+  def log(cpu, 0x2C), do: log_state(cpu, 0x2C, "BIT", :word)
   def log(cpu, 0x38), do: log_state(cpu, 0x38, "SEC", :none)
   def log(cpu, 0x4C), do: log_state(cpu, 0x4C, "JMP", :word)
   def log(cpu, 0x85), do: log_state(cpu, 0x85, "STA", :byte)
@@ -213,6 +219,8 @@ defmodule Belmont.CPU do
   # instruction execution
   defp execute(cpu, 0x18), do: unset_flag_op(cpu, :carry)
   defp execute(cpu, 0x20), do: jsr(cpu, :absolute)
+  defp execute(cpu, 0x24), do: bit(cpu, :zero_page)
+  defp execute(cpu, 0x2C), do: bit(cpu, :absolute)
   defp execute(cpu, 0x38), do: set_flag_op(cpu, :carry)
   defp execute(cpu, 0x4C), do: jmp(cpu, :absolute)
   defp execute(cpu, 0x85), do: sta(cpu, :zero_page)
@@ -261,7 +269,27 @@ defmodule Belmont.CPU do
     %{cpu | program_counter: pc, cycle_count: cpu.cycle_count + cycle}
   end
 
-  # load value read at address into the accumuilator
+  # test if one or more bits are set
+  def bit(cpu, addressing_mode) do
+    byte_address = AddressingMode.get_address(addressing_mode, cpu)
+    byte = Memory.read_byte(cpu.memory, byte_address.address)
+    res = cpu.registers.a &&& byte
+
+    {pc, cycle} =
+      case addressing_mode do
+        :zero_page -> {2, 3}
+        :absolute -> {3, 4}
+      end
+
+    cpu
+    |> set_flag_with_test(:zero, res)
+    |> set_flag_with_test(:negative, res)
+    |> set_flag_with_test(:overflow, res)
+    |> Map.put(:program_counter, cpu.program_counter + pc)
+    |> Map.put(:cycle_count, cpu.cycle_count + cycle)
+  end
+
+  # load value read at address into the accumulator
   def lda(cpu, addressing_mode) do
     byte_address = AddressingMode.get_address(addressing_mode, cpu)
     byte = Memory.read_byte(cpu.memory, byte_address.address)
