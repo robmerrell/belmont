@@ -205,6 +205,7 @@ defmodule Belmont.CPU do
   def log(cpu, 0x2C), do: log_state(cpu, 0x2C, "BIT", :word)
   def log(cpu, 0x38), do: log_state(cpu, 0x38, "SEC", :none)
   def log(cpu, 0x4C), do: log_state(cpu, 0x4C, "JMP", :word)
+  def log(cpu, 0x50), do: log_state(cpu, 0x50, "BVC", :byte)
   def log(cpu, 0x70), do: log_state(cpu, 0x70, "BVS", :byte)
   def log(cpu, 0x85), do: log_state(cpu, 0x85, "STA", :byte)
   def log(cpu, 0x86), do: log_state(cpu, 0x86, "STX", :byte)
@@ -224,6 +225,7 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0x2C), do: bit(cpu, :absolute)
   defp execute(cpu, 0x38), do: set_flag_op(cpu, :carry)
   defp execute(cpu, 0x4C), do: jmp(cpu, :absolute)
+  defp execute(cpu, 0x50), do: bvc(cpu, :relative)
   defp execute(cpu, 0x70), do: bvs(cpu, :relative)
   defp execute(cpu, 0x85), do: sta(cpu, :zero_page)
   defp execute(cpu, 0x86), do: stx(cpu, :zero_page)
@@ -278,7 +280,18 @@ defmodule Belmont.CPU do
     if flag_set?(cpu, :overflow) do
       %{cpu | program_counter: address.address, cycle_count: cpu.cycle_count + address.additional_cycles + 2}
     else
-      %{cpu | program_counter: cpu.program_counter + 2, cycle_count: cpu.cycle_count + address.additional_cycles}
+      %{cpu | program_counter: cpu.program_counter + 2, cycle_count: cpu.cycle_count + address.additional_cycles + 1}
+    end
+  end
+
+  # branch if overflow is clear
+  def bvc(cpu, addressing_mode) do
+    address = AddressingMode.get_address(addressing_mode, cpu)
+
+    if !flag_set?(cpu, :overflow) do
+      %{cpu | program_counter: address.address, cycle_count: cpu.cycle_count + address.additional_cycles + 2}
+    else
+      %{cpu | program_counter: cpu.program_counter + 2, cycle_count: cpu.cycle_count + address.additional_cycles + 1}
     end
   end
 

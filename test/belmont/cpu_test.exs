@@ -183,6 +183,43 @@ defmodule Belmont.CPUTest do
     end
   end
 
+  describe "bvc/2" do
+    test "adds the relative byte to the program counter if overflow flag is not set" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0000, value: 0x50],
+            [bank: 0, location: 0x0001, value: 0x04]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.bvc(:relative)
+
+      assert cpu.program_counter == 0x8006
+    end
+
+    test "does not branch if overflow is not set" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0000, value: 0x50],
+            [bank: 0, location: 0x0001, value: 0x04]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> CPU.set_flag(:overflow)
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.bvc(:relative)
+
+      assert cpu.program_counter == 0x8002
+    end
+  end
+
   describe "bit/2" do
     setup do
       cpu =
