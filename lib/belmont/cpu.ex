@@ -199,6 +199,7 @@ defmodule Belmont.CPU do
   end
 
   # instruction logging
+  def log(cpu, 0x10), do: log_state(cpu, 0x10, "BPL", :byte)
   def log(cpu, 0x18), do: log_state(cpu, 0x18, "CLC", :none)
   def log(cpu, 0x20), do: log_state(cpu, 0x20, "JSR", :word)
   def log(cpu, 0x24), do: log_state(cpu, 0x24, "BIT", :byte)
@@ -219,14 +220,15 @@ defmodule Belmont.CPU do
   def log(cpu, opcode), do: log_state(cpu, opcode, "UNDEF", :none)
 
   # instruction execution
+  defp execute(cpu, 0x10), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :negative) end)
   defp execute(cpu, 0x18), do: unset_flag_op(cpu, :carry)
   defp execute(cpu, 0x20), do: jsr(cpu, :absolute)
   defp execute(cpu, 0x24), do: bit(cpu, :zero_page)
   defp execute(cpu, 0x2C), do: bit(cpu, :absolute)
   defp execute(cpu, 0x38), do: set_flag_op(cpu, :carry)
   defp execute(cpu, 0x4C), do: jmp(cpu, :absolute)
-  defp execute(cpu, 0x50), do: bvc(cpu, :relative)
-  defp execute(cpu, 0x70), do: bvs(cpu, :relative)
+  defp execute(cpu, 0x50), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :overflow) end)
+  defp execute(cpu, 0x70), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :overflow) end)
   defp execute(cpu, 0x85), do: sta(cpu, :zero_page)
   defp execute(cpu, 0x86), do: stx(cpu, :zero_page)
   defp execute(cpu, 0x90), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :carry) end)
@@ -271,28 +273,6 @@ defmodule Belmont.CPU do
       end
 
     %{cpu | program_counter: pc, cycle_count: cpu.cycle_count + cycles}
-  end
-
-  # branch if overflow is set
-  def bvs(cpu, addressing_mode) do
-    address = AddressingMode.get_address(addressing_mode, cpu)
-
-    if flag_set?(cpu, :overflow) do
-      %{cpu | program_counter: address.address, cycle_count: cpu.cycle_count + address.additional_cycles + 2}
-    else
-      %{cpu | program_counter: cpu.program_counter + 2, cycle_count: cpu.cycle_count + address.additional_cycles + 1}
-    end
-  end
-
-  # branch if overflow is clear
-  def bvc(cpu, addressing_mode) do
-    address = AddressingMode.get_address(addressing_mode, cpu)
-
-    if !flag_set?(cpu, :overflow) do
-      %{cpu | program_counter: address.address, cycle_count: cpu.cycle_count + address.additional_cycles + 2}
-    else
-      %{cpu | program_counter: cpu.program_counter + 2, cycle_count: cpu.cycle_count + address.additional_cycles + 1}
-    end
   end
 
   # test if one or more bits are set
