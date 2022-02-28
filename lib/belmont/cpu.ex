@@ -209,6 +209,7 @@ defmodule Belmont.CPU do
   def log(cpu, 0x50), do: log_state(cpu, 0x50, "BVC", :byte)
   def log(cpu, 0x60), do: log_state(cpu, 0x60, "RTS", :none)
   def log(cpu, 0x70), do: log_state(cpu, 0x70, "BVS", :byte)
+  def log(cpu, 0x78), do: log_state(cpu, 0x78, "SEI", :none)
   def log(cpu, 0x85), do: log_state(cpu, 0x85, "STA", :byte)
   def log(cpu, 0x86), do: log_state(cpu, 0x86, "STX", :byte)
   def log(cpu, 0x90), do: log_state(cpu, 0x90, "BCC", :byte)
@@ -218,6 +219,7 @@ defmodule Belmont.CPU do
   def log(cpu, 0xD0), do: log_state(cpu, 0xD0, "BNE", :byte)
   def log(cpu, 0xEA), do: log_state(cpu, 0xEA, "NOP", :none)
   def log(cpu, 0xF0), do: log_state(cpu, 0xF0, "BEQ", :byte)
+  def log(cpu, 0xF8), do: log_state(cpu, 0xF8, "SED", :none)
   def log(cpu, opcode), do: log_state(cpu, opcode, "UNDEF", :none)
 
   # instruction execution
@@ -231,6 +233,7 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0x50), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :overflow) end)
   defp execute(cpu, 0x60), do: rts(cpu)
   defp execute(cpu, 0x70), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :overflow) end)
+  defp execute(cpu, 0x78), do: set_flag_op(cpu, :interrupt)
   defp execute(cpu, 0x85), do: sta(cpu, :zero_page)
   defp execute(cpu, 0x86), do: stx(cpu, :zero_page)
   defp execute(cpu, 0x90), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :carry) end)
@@ -240,6 +243,7 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0xD0), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :zero) end)
   defp execute(cpu, 0xEA), do: nop(cpu, :implied)
   defp execute(cpu, 0xF0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :zero) end)
+  defp execute(cpu, 0xF8), do: set_flag_op(cpu, :decimal)
 
   defp execute(cpu, opcode) do
     raise("Undefined opcode: #{Hexstr.hex(opcode, 2)} at #{Hexstr.hex(cpu.program_counter, 4)}")
