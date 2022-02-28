@@ -305,4 +305,24 @@ defmodule Belmont.CPUTest do
       assert {_cpu, 0x80} = CPU.pop_byte_off_stack(cpu)
     end
   end
+
+  describe "rts/1" do
+    test "should return to the point pushed onto the stack + 1" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0001, value: 0x60]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.push_word_onto_stack(0xC5FF)
+        |> CPU.rts()
+
+      assert cpu.program_counter == 0xC600
+      assert cpu.stack_pointer == 0xFD
+    end
+  end
 end

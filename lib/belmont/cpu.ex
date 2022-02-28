@@ -207,6 +207,7 @@ defmodule Belmont.CPU do
   def log(cpu, 0x38), do: log_state(cpu, 0x38, "SEC", :none)
   def log(cpu, 0x4C), do: log_state(cpu, 0x4C, "JMP", :word)
   def log(cpu, 0x50), do: log_state(cpu, 0x50, "BVC", :byte)
+  def log(cpu, 0x60), do: log_state(cpu, 0x60, "RTS", :none)
   def log(cpu, 0x70), do: log_state(cpu, 0x70, "BVS", :byte)
   def log(cpu, 0x85), do: log_state(cpu, 0x85, "STA", :byte)
   def log(cpu, 0x86), do: log_state(cpu, 0x86, "STX", :byte)
@@ -228,6 +229,7 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0x38), do: set_flag_op(cpu, :carry)
   defp execute(cpu, 0x4C), do: jmp(cpu, :absolute)
   defp execute(cpu, 0x50), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :overflow) end)
+  defp execute(cpu, 0x60), do: rts(cpu)
   defp execute(cpu, 0x70), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :overflow) end)
   defp execute(cpu, 0x85), do: sta(cpu, :zero_page)
   defp execute(cpu, 0x86), do: stx(cpu, :zero_page)
@@ -381,6 +383,16 @@ defmodule Belmont.CPU do
     byte_address = AddressingMode.get_address(addressing_mode, cpu)
     cpu = push_word_onto_stack(cpu, cpu.program_counter + 2)
     %{cpu | program_counter: byte_address.address, cycle_count: cpu.cycle_count + 6}
+  end
+
+  # return to the calling routine at the end of a subroutine
+  def rts(cpu) do
+    {cpu, high} = pop_byte_off_stack(cpu)
+    {cpu, low} = pop_byte_off_stack(cpu)
+
+    address = high ||| low <<< 8
+
+    %{cpu | program_counter: address + 1, cycle_count: cpu.cycle_count + 6}
   end
 
   # branch if the given function evaluates to true
