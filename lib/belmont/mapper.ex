@@ -1,4 +1,8 @@
 defmodule Belmont.Mapper do
+  @moduledoc """
+  Defines a behavior that all mappers should implement
+  """
+
   alias Belmont.Cartridge
   alias Belmont.Memory
 

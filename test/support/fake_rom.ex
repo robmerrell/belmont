@@ -1,4 +1,8 @@
 defmodule Belmont.FakeROM do
+  @moduledoc """
+  Generate a fake rom for testing    
+  """
+
   @defaults %{
     prg_rom_data_override: [],
     fill_prg_rom_start: 0x00,

@@ -1,5 +1,5 @@
 defmodule Belmont.CPU.AddressingMode do
-  @doc """
+  @moduledoc """
   Handles the various addressing modes of the CPU. Also determines per mode if a page boundry
   was crossed so that the extra cycles can be accounted for in the CPU.
   """

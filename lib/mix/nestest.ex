@@ -1,4 +1,8 @@
 defmodule Mix.Tasks.Nestest do
+  @moduledoc """
+  Task to run an compare the CPU output with a known good log file
+  """
+
   use Mix.Task
 
   @shortdoc "Run the CPU against the nestest test rom and compare logs"
