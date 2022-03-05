@@ -325,4 +325,25 @@ defmodule Belmont.CPUTest do
       assert cpu.stack_pointer == 0xFD
     end
   end
+
+  describe "php/1" do
+    test "should push the flag register onto the stack" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0001, value: 0x08]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.set_register(:p, 0xFF)
+        |> CPU.php()
+
+      assert cpu.stack_pointer == 0xFC
+      {_cpu, value} = CPU.pop_byte_off_stack(cpu)
+      assert value == 0xFF
+    end
+  end
 end

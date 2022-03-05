@@ -199,6 +199,7 @@ defmodule Belmont.CPU do
   end
 
   # instruction logging
+  def log(cpu, 0x08), do: log_state(cpu, 0x08, "PHP", :none)
   def log(cpu, 0x10), do: log_state(cpu, 0x10, "BPL", :byte)
   def log(cpu, 0x18), do: log_state(cpu, 0x18, "CLC", :none)
   def log(cpu, 0x20), do: log_state(cpu, 0x20, "JSR", :word)
@@ -223,6 +224,7 @@ defmodule Belmont.CPU do
   def log(cpu, opcode), do: log_state(cpu, opcode, "UNDEF", :none)
 
   # instruction execution
+  defp execute(cpu, 0x08), do: php(cpu)
   defp execute(cpu, 0x10), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :negative) end)
   defp execute(cpu, 0x18), do: unset_flag_op(cpu, :carry)
   defp execute(cpu, 0x20), do: jsr(cpu, :absolute)
@@ -408,5 +410,11 @@ defmodule Belmont.CPU do
     else
       %{cpu | program_counter: cpu.program_counter + 2, cycle_count: cpu.cycle_count + 2}
     end
+  end
+
+  # pushes a copy of the registers onto the stack
+  def php(cpu) do
+    cpu = push_byte_onto_stack(cpu, cpu.registers.p)
+    %{cpu | program_counter: cpu.program_counter + 1, cycle_count: cpu.cycle_count + 3}
   end
 end
