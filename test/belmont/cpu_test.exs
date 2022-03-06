@@ -125,6 +125,26 @@ defmodule Belmont.CPUTest do
     end
   end
 
+  describe "and/2" do
+    test "ands the accumulator with a byte from memory" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0000, value: 0x29],
+            [bank: 0, location: 0x0001, value: 0xEF]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.set_register(:a, 0xAB)
+        |> CPU.and_instr(:immediate)
+
+      assert cpu.registers.a == 0xAB
+    end
+  end
+
   describe "jmp/2" do
     test "jumps to the location read in memory" do
       cpu =
@@ -344,6 +364,27 @@ defmodule Belmont.CPUTest do
       assert cpu.stack_pointer == 0xFC
       {_cpu, value} = CPU.pop_byte_off_stack(cpu)
       assert value == 0xFF
+    end
+  end
+
+  describe "pla/1" do
+    test "should pop a byte off the stack and store it in the accumulator" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0001, value: 0x08]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.set_register(:p, 0xFF)
+        |> CPU.php()
+        |> CPU.pla()
+
+      assert cpu.stack_pointer == 0xFD
+      assert cpu.registers.a == 0xFF
     end
   end
 end

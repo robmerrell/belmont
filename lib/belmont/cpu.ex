@@ -50,6 +50,8 @@ defmodule Belmont.CPU do
     zero: 1 <<< 1,
     interrupt: 1 <<< 2,
     decimal: 1 <<< 3,
+    unused_1: 1 <<< 4,
+    unused_2: 1 <<< 5,
     overflow: 1 <<< 6,
     negative: 1 <<< 7
   }
@@ -204,11 +206,13 @@ defmodule Belmont.CPU do
   def log(cpu, 0x18), do: log_state(cpu, 0x18, "CLC", :none)
   def log(cpu, 0x20), do: log_state(cpu, 0x20, "JSR", :word)
   def log(cpu, 0x24), do: log_state(cpu, 0x24, "BIT", :byte)
+  def log(cpu, 0x29), do: log_state(cpu, 0x29, "AND", :byte)
   def log(cpu, 0x2C), do: log_state(cpu, 0x2C, "BIT", :word)
   def log(cpu, 0x38), do: log_state(cpu, 0x38, "SEC", :none)
   def log(cpu, 0x4C), do: log_state(cpu, 0x4C, "JMP", :word)
   def log(cpu, 0x50), do: log_state(cpu, 0x50, "BVC", :byte)
   def log(cpu, 0x60), do: log_state(cpu, 0x60, "RTS", :none)
+  def log(cpu, 0x68), do: log_state(cpu, 0x68, "PLA", :none)
   def log(cpu, 0x70), do: log_state(cpu, 0x70, "BVS", :byte)
   def log(cpu, 0x78), do: log_state(cpu, 0x78, "SEI", :none)
   def log(cpu, 0x85), do: log_state(cpu, 0x85, "STA", :byte)
@@ -229,11 +233,13 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0x18), do: unset_flag_op(cpu, :carry)
   defp execute(cpu, 0x20), do: jsr(cpu, :absolute)
   defp execute(cpu, 0x24), do: bit(cpu, :zero_page)
+  defp execute(cpu, 0x29), do: and_instr(cpu, :immediate)
   defp execute(cpu, 0x2C), do: bit(cpu, :absolute)
   defp execute(cpu, 0x38), do: set_flag_op(cpu, :carry)
   defp execute(cpu, 0x4C), do: jmp(cpu, :absolute)
   defp execute(cpu, 0x50), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :overflow) end)
   defp execute(cpu, 0x60), do: rts(cpu)
+  defp execute(cpu, 0x68), do: pla(cpu)
   defp execute(cpu, 0x70), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :overflow) end)
   defp execute(cpu, 0x78), do: set_flag_op(cpu, :interrupt)
   defp execute(cpu, 0x85), do: sta(cpu, :zero_page)
@@ -269,6 +275,32 @@ defmodule Belmont.CPU do
     |> unset_flag(flag)
     |> Map.put(:program_counter, cpu.program_counter + 1)
     |> Map.put(:cycle_count, cpu.cycle_count + 2)
+  end
+
+  # ands the byte in memory with the accumulator
+  def and_instr(cpu, addressing_mode) do
+    byte_address = AddressingMode.get_address(addressing_mode, cpu)
+    byte = Memory.read_byte(cpu.memory, byte_address.address)
+    anded = cpu.registers.a &&& byte
+
+    {pc, cycle} =
+      case addressing_mode do
+        :immediate -> {2, 2}
+        :zero_page -> {2, 3}
+        :zero_page_x -> {2, 4}
+        :absolute -> {3, 4}
+        :absolute_x -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
+        :absolute_y -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
+        :indexed_indirect -> {2, 6}
+        :indirect_indexed -> if byte_address.page_crossed, do: {2, 5}, else: {2, 6}
+      end
+
+    cpu
+    |> set_register(:a, anded)
+    |> set_flag_with_test(:zero, anded)
+    |> set_flag_with_test(:negative, anded)
+    |> Map.put(:program_counter, cpu.program_counter + pc)
+    |> Map.put(:cycle_count, cpu.cycle_count + cycle)
   end
 
   # read a word and set the program counter to that value
@@ -412,9 +444,29 @@ defmodule Belmont.CPU do
     end
   end
 
-  # pushes a copy of the registers onto the stack
+  # push a copy of the flag register onto the stack
   def php(cpu) do
-    cpu = push_byte_onto_stack(cpu, cpu.registers.p)
-    %{cpu | program_counter: cpu.program_counter + 1, cycle_count: cpu.cycle_count + 3}
+    # the unused flags need to be set before pushing the value only
+    byte =
+      cpu.registers.p
+      |> bor(@flags[:unused_1])
+      |> bor(@flags[:unused_2])
+
+    cpu
+    |> push_byte_onto_stack(byte)
+    |> Map.put(:program_counter, cpu.program_counter + 1)
+    |> Map.put(:cycle_count, cpu.cycle_count + 3)
+  end
+
+  # pop a byte off the stack and store it in the accumlator
+  def pla(cpu) do
+    {cpu, byte} = pop_byte_off_stack(cpu)
+
+    cpu
+    |> set_register(:a, byte)
+    |> set_flag_with_test(:zero, byte)
+    |> set_flag_with_test(:negative, byte)
+    |> Map.put(:program_counter, cpu.program_counter + 1)
+    |> Map.put(:cycle_count, cpu.cycle_count + 4)
   end
 end
