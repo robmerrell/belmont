@@ -211,6 +211,42 @@ defmodule Belmont.CPUTest do
     end
   end
 
+  describe "cmp/2" do
+    setup do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0000, value: 0xC9],
+            [bank: 0, location: 0x0001, value: 0x35]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> Map.put(:program_counter, 0x8000)
+
+      {:ok, cpu: cpu}
+    end
+
+    test "sets the carry flag", %{cpu: cpu} do
+      cpu =
+        cpu
+        |> CPU.set_register(:a, 0x37)
+        |> CPU.cmp(:immediate)
+
+      assert CPU.flag_set?(cpu, :carry)
+    end
+
+    test "sets the zero flag", %{cpu: cpu} do
+      cpu =
+        cpu
+        |> CPU.set_register(:a, 0x35)
+        |> CPU.cmp(:immediate)
+
+      assert CPU.flag_set?(cpu, :zero)
+    end
+  end
+
   describe "lda/2" do
     setup do
       cpu =
