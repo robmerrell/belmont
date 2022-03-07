@@ -202,6 +202,7 @@ defmodule Belmont.CPU do
 
   # instruction logging
   def log(cpu, 0x08), do: log_state(cpu, 0x08, "PHP", :none)
+  def log(cpu, 0x09), do: log_state(cpu, 0x09, "ORA", :byte)
   def log(cpu, 0x10), do: log_state(cpu, 0x10, "BPL", :byte)
   def log(cpu, 0x18), do: log_state(cpu, 0x18, "CLC", :none)
   def log(cpu, 0x20), do: log_state(cpu, 0x20, "JSR", :word)
@@ -234,12 +235,13 @@ defmodule Belmont.CPU do
 
   # instruction execution
   defp execute(cpu, 0x08), do: php(cpu)
+  defp execute(cpu, 0x09), do: logical_op(cpu, :immediate, :or)
   defp execute(cpu, 0x10), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :negative) end)
   defp execute(cpu, 0x18), do: unset_flag_op(cpu, :carry)
   defp execute(cpu, 0x20), do: jsr(cpu, :absolute)
   defp execute(cpu, 0x24), do: bit(cpu, :zero_page)
   defp execute(cpu, 0x28), do: plp(cpu)
-  defp execute(cpu, 0x29), do: and_instr(cpu, :immediate)
+  defp execute(cpu, 0x29), do: logical_op(cpu, :immediate, :and)
   defp execute(cpu, 0x2C), do: bit(cpu, :absolute)
   defp execute(cpu, 0x30), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :negative) end)
   defp execute(cpu, 0x38), do: set_flag_op(cpu, :carry)
@@ -287,11 +289,17 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + 2)
   end
 
-  # ands the byte in memory with the accumulator
-  def and_instr(cpu, addressing_mode) do
+  # performs a logical operation on a byte in memory with the accumulator
+  def logical_op(cpu, addressing_mode, op) do
     byte_address = AddressingMode.get_address(addressing_mode, cpu)
     byte = Memory.read_byte(cpu.memory, byte_address.address)
-    anded = cpu.registers.a &&& byte
+
+    val =
+      case op do
+        :and -> cpu.registers.a &&& byte
+        :or -> bor(cpu.registers.a, byte)
+        :eor -> bxor(cpu.registers.a, byte)
+      end
 
     {pc, cycle} =
       case addressing_mode do
@@ -306,9 +314,9 @@ defmodule Belmont.CPU do
       end
 
     cpu
-    |> set_register(:a, anded)
-    |> set_flag_with_test(:zero, anded)
-    |> set_flag_with_test(:negative, anded)
+    |> set_register(:a, val)
+    |> set_flag_with_test(:zero, val)
+    |> set_flag_with_test(:negative, val)
     |> Map.put(:program_counter, cpu.program_counter + pc)
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
   end

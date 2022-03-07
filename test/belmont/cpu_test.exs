@@ -125,8 +125,8 @@ defmodule Belmont.CPUTest do
     end
   end
 
-  describe "and/2" do
-    test "ands the accumulator with a byte from memory" do
+  describe "logical_op/3" do
+    setup do
       cpu =
         FakeROM.rom(
           prg_rom_data_override: [
@@ -139,9 +139,18 @@ defmodule Belmont.CPUTest do
         |> CPU.new()
         |> Map.put(:program_counter, 0x8000)
         |> CPU.set_register(:a, 0xAB)
-        |> CPU.and_instr(:immediate)
 
+      {:ok, cpu: cpu}
+    end
+
+    test "and the accumulator with a byte from memory", %{cpu: cpu} do
+      cpu = CPU.logical_op(cpu, :immediate, :and)
       assert cpu.registers.a == 0xAB
+    end
+
+    test "or the accumulator with a byte from memory", %{cpu: cpu} do
+      cpu = CPU.logical_op(cpu, :immediate, :or)
+      assert cpu.registers.a == 0xEF
     end
   end
 
