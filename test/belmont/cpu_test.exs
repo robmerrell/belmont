@@ -423,4 +423,46 @@ defmodule Belmont.CPUTest do
       assert cpu.registers.a == 0xFF
     end
   end
+
+  describe "pha/1" do
+    test "pushes accumulator onto the stack" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0001, value: 0x08]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.set_register(:a, 0xFF)
+        |> CPU.pha()
+
+      assert cpu.stack_pointer == 0xFC
+      {_cpu, value} = CPU.pop_byte_off_stack(cpu)
+      assert value == 0xFF
+    end
+  end
+
+  describe "plp/1" do
+    test "pop byte off stack and sets it on the status register" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0001, value: 0x28]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.set_register(:p, 0xFF)
+        |> CPU.php()
+        |> CPU.pla()
+
+      assert cpu.stack_pointer == 0xFD
+      assert cpu.registers.p == 0xFD
+    end
+  end
 end

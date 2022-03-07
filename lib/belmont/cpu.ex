@@ -206,9 +206,11 @@ defmodule Belmont.CPU do
   def log(cpu, 0x18), do: log_state(cpu, 0x18, "CLC", :none)
   def log(cpu, 0x20), do: log_state(cpu, 0x20, "JSR", :word)
   def log(cpu, 0x24), do: log_state(cpu, 0x24, "BIT", :byte)
+  def log(cpu, 0x28), do: log_state(cpu, 0x28, "PLP", :none)
   def log(cpu, 0x29), do: log_state(cpu, 0x29, "AND", :byte)
   def log(cpu, 0x2C), do: log_state(cpu, 0x2C, "BIT", :word)
   def log(cpu, 0x38), do: log_state(cpu, 0x38, "SEC", :none)
+  def log(cpu, 0x48), do: log_state(cpu, 0x48, "PHA", :none)
   def log(cpu, 0x4C), do: log_state(cpu, 0x4C, "JMP", :word)
   def log(cpu, 0x50), do: log_state(cpu, 0x50, "BVC", :byte)
   def log(cpu, 0x60), do: log_state(cpu, 0x60, "RTS", :none)
@@ -235,9 +237,11 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0x18), do: unset_flag_op(cpu, :carry)
   defp execute(cpu, 0x20), do: jsr(cpu, :absolute)
   defp execute(cpu, 0x24), do: bit(cpu, :zero_page)
+  defp execute(cpu, 0x28), do: plp(cpu)
   defp execute(cpu, 0x29), do: and_instr(cpu, :immediate)
   defp execute(cpu, 0x2C), do: bit(cpu, :absolute)
   defp execute(cpu, 0x38), do: set_flag_op(cpu, :carry)
+  defp execute(cpu, 0x48), do: pha(cpu)
   defp execute(cpu, 0x4C), do: jmp(cpu, :absolute)
   defp execute(cpu, 0x50), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :overflow) end)
   defp execute(cpu, 0x60), do: rts(cpu)
@@ -488,6 +492,14 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + 3)
   end
 
+  # push a copy of the accumulator onto the stack
+  def pha(cpu) do
+    cpu
+    |> push_byte_onto_stack(cpu.registers.a)
+    |> Map.put(:program_counter, cpu.program_counter + 1)
+    |> Map.put(:cycle_count, cpu.cycle_count + 3)
+  end
+
   # pop a byte off the stack and store it in the accumlator
   def pla(cpu) do
     {cpu, byte} = pop_byte_off_stack(cpu)
@@ -496,6 +508,20 @@ defmodule Belmont.CPU do
     |> set_register(:a, byte)
     |> set_flag_with_test(:zero, byte)
     |> set_flag_with_test(:negative, byte)
+    |> Map.put(:program_counter, cpu.program_counter + 1)
+    |> Map.put(:cycle_count, cpu.cycle_count + 4)
+  end
+
+  # pop a byte off the stack and set flags based on its value
+  def plp(cpu) do
+    {cpu, byte} = pop_byte_off_stack(cpu)
+
+    # make the unused flags match the nestest logs
+    byte = byte &&& bnot(@flags[:unused_1])
+    byte = bor(byte, @flags[:unused_2])
+
+    cpu
+    |> set_register(:p, byte)
     |> Map.put(:program_counter, cpu.program_counter + 1)
     |> Map.put(:cycle_count, cpu.cycle_count + 4)
   end
