@@ -213,6 +213,7 @@ defmodule Belmont.CPU do
   def log(cpu, 0x30), do: log_state(cpu, 0x30, "BMI", :byte)
   def log(cpu, 0x38), do: log_state(cpu, 0x38, "SEC", :none)
   def log(cpu, 0x48), do: log_state(cpu, 0x48, "PHA", :none)
+  def log(cpu, 0x49), do: log_state(cpu, 0x49, "EOR", :byte)
   def log(cpu, 0x4C), do: log_state(cpu, 0x4C, "JMP", :word)
   def log(cpu, 0x50), do: log_state(cpu, 0x50, "BVC", :byte)
   def log(cpu, 0x60), do: log_state(cpu, 0x60, "RTS", :none)
@@ -225,6 +226,7 @@ defmodule Belmont.CPU do
   def log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
   def log(cpu, 0xA9), do: log_state(cpu, 0xA9, "LDA", :byte)
   def log(cpu, 0xB0), do: log_state(cpu, 0xB0, "BCS", :byte)
+  def log(cpu, 0xB8), do: log_state(cpu, 0xB8, "CLV", :none)
   def log(cpu, 0xC9), do: log_state(cpu, 0xC9, "CMP", :byte)
   def log(cpu, 0xD0), do: log_state(cpu, 0xD0, "BNE", :byte)
   def log(cpu, 0xD8), do: log_state(cpu, 0xD8, "CLD", :none)
@@ -246,6 +248,7 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0x30), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :negative) end)
   defp execute(cpu, 0x38), do: set_flag_op(cpu, :carry)
   defp execute(cpu, 0x48), do: pha(cpu)
+  defp execute(cpu, 0x49), do: logical_op(cpu, :immediate, :eor)
   defp execute(cpu, 0x4C), do: jmp(cpu, :absolute)
   defp execute(cpu, 0x50), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :overflow) end)
   defp execute(cpu, 0x60), do: rts(cpu)
@@ -258,6 +261,7 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0xA2), do: ldx(cpu, :immediate)
   defp execute(cpu, 0xA9), do: lda(cpu, :immediate)
   defp execute(cpu, 0xB0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :carry) end)
+  defp execute(cpu, 0xB8), do: unset_flag_op(cpu, :overflow)
   defp execute(cpu, 0xC9), do: cmp(cpu, :immediate)
   defp execute(cpu, 0xD0), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :zero) end)
   defp execute(cpu, 0xD8), do: unset_flag_op(cpu, :decimal)
@@ -347,8 +351,8 @@ defmodule Belmont.CPU do
 
     cpu
     |> set_flag_with_test(:zero, res)
-    |> set_flag_with_test(:negative, res)
-    |> set_flag_with_test(:overflow, res)
+    |> set_flag_with_test(:negative, byte)
+    |> set_flag_with_test(:overflow, byte)
     |> Map.put(:program_counter, cpu.program_counter + pc)
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
   end
@@ -370,11 +374,11 @@ defmodule Belmont.CPU do
         :indirect_indexed -> if byte_address.page_crossed, do: {2, 5}, else: {2, 6}
       end
 
-    cpu = if cpu.registers.a >= byte, do: set_flag(cpu, :carry), else: cpu
-    cpu = if cpu.registers.a == byte, do: set_flag(cpu, :zero), else: cpu
+    cpu = if cpu.registers.a >= byte, do: set_flag(cpu, :carry), else: unset_flag(cpu, :carry)
+    cpu = if cpu.registers.a == byte, do: set_flag(cpu, :zero), else: unset_flag(cpu, :zero)
 
     cpu
-    |> set_flag_with_test(:negative, byte)
+    |> set_flag_with_test(:negative, cpu.registers.a - byte)
     |> Map.put(:program_counter, cpu.program_counter + pc)
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
   end
