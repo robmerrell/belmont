@@ -324,7 +324,7 @@ defmodule Belmont.CPU do
     byte = Memory.read_byte(cpu.memory, byte_address.address)
     val = byte + acc + (cpu.registers.p &&& 0x01)
 
-    overflow = (acc ^^^ byte &&& 0x80) == 0x00 && (acc ^^^ val &&& 0x80) != 0x00
+    overflow = (Bitwise.bxor(acc, byte) &&& 0x80) == 0x00 && (Bitwise.bxor(acc, val) &&& 0x80) != 0x00
 
     {pc, cycle} =
       case addressing_mode do
