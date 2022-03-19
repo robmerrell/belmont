@@ -312,7 +312,9 @@ defmodule Belmont.CPU do
     %{cpu | program_counter: cpu.program_counter + 1, cycle_count: cpu.cycle_count + 2}
   end
 
-  # set a flag to 1
+  @doc """
+  set a flag to 1
+  """
   def set_flag_op(cpu, flag) do
     cpu
     |> set_flag(flag)
@@ -320,7 +322,9 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + 2)
   end
 
-  # set a flag to 0
+  @doc """
+  set a flag to 0
+  """
   def unset_flag_op(cpu, flag) do
     cpu
     |> unset_flag(flag)
@@ -328,7 +332,9 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + 2)
   end
 
-  # adds the contents of a memory location to the accumulator together with the carry bit
+  @doc """
+  adds the contents of a memory location to the accumulator together with the carry bit
+  """
   def adc(cpu, addressing_mode) do
     acc = cpu.registers.a
     byte_address = AddressingMode.get_address(addressing_mode, cpu)
@@ -363,7 +369,9 @@ defmodule Belmont.CPU do
     if val > 0xFF, do: set_flag(cpu, :carry), else: unset_flag(cpu, :carry)
   end
 
-  # subtracts the contents of a memory location from the accumulator together with the carry bit
+  @doc """
+  subtracts the contents of a memory location from the accumulator together with the carry bit
+  """
   def sbc(cpu, addressing_mode) do
     acc = cpu.registers.a
     byte_address = AddressingMode.get_address(addressing_mode, cpu)
@@ -398,7 +406,9 @@ defmodule Belmont.CPU do
     if val >= 0, do: set_flag(cpu, :carry), else: unset_flag(cpu, :carry)
   end
 
-  # performs a logical operation on a byte in memory with the accumulator
+  @doc """
+  performs a logical operation on a byte in memory with the accumulator
+  """
   def logical_op(cpu, addressing_mode, op) do
     byte_address = AddressingMode.get_address(addressing_mode, cpu)
     byte = Memory.read_byte(cpu.memory, byte_address.address)
@@ -430,7 +440,9 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
   end
 
-  # read a word and set the program counter to that value
+  @doc """
+  read a word and set the program counter to that value
+  """
   def jmp(cpu, addressing_mode) do
     address = AddressingMode.get_address(addressing_mode, cpu)
 
@@ -442,7 +454,9 @@ defmodule Belmont.CPU do
     %{cpu | program_counter: pc, cycle_count: cpu.cycle_count + cycles}
   end
 
-  # test if one or more bits are set
+  @doc """
+  test if one or more bits are set
+  """
   def bit(cpu, addressing_mode) do
     byte_address = AddressingMode.get_address(addressing_mode, cpu)
     byte = Memory.read_byte(cpu.memory, byte_address.address)
@@ -462,7 +476,9 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
   end
 
-  # increment the given register by 1
+  @doc """
+  increment the given register by 1
+  """
   def increment_register(cpu, reg) do
     val = cpu.registers[reg] + 1
     wrapped_val = rem(val, 256)
@@ -475,7 +491,9 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + 2)
   end
 
-  # compare register with a byte from memory and sets flags
+  @doc """
+  compare register with a byte from memory and sets flags
+  """
   def compare(cpu, addressing_mode, reg) do
     byte_address = AddressingMode.get_address(addressing_mode, cpu)
     byte = Memory.read_byte(cpu.memory, byte_address.address)
@@ -501,7 +519,9 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
   end
 
-  # load value read at address into the register
+  @doc """
+  load value read at address into the register
+  """
   def load_register(cpu, addressing_mode, register) do
     byte_address = AddressingMode.get_address(addressing_mode, cpu)
     byte = Memory.read_byte(cpu.memory, byte_address.address)
@@ -542,14 +562,18 @@ defmodule Belmont.CPU do
     %{cpu | memory: memory, program_counter: cpu.program_counter + pc, cycle_count: cpu.cycle_count + cycle}
   end
 
-  # push the address (minus one) of the return point to the stack and set the program counter to the memory address
+  @doc """
+  push the address (minus one) of the return point to the stack and set the program counter to the memory address
+  """
   def jsr(cpu, addressing_mode) do
     byte_address = AddressingMode.get_address(addressing_mode, cpu)
     cpu = push_word_onto_stack(cpu, cpu.program_counter + 2)
     %{cpu | program_counter: byte_address.address, cycle_count: cpu.cycle_count + 6}
   end
 
-  # return to the calling routine at the end of a subroutine
+  @doc """
+  return to the calling routine at the end of a subroutine
+  """
   def rts(cpu) do
     {cpu, high} = pop_byte_off_stack(cpu)
     {cpu, low} = pop_byte_off_stack(cpu)
@@ -559,7 +583,9 @@ defmodule Belmont.CPU do
     %{cpu | program_counter: address + 1, cycle_count: cpu.cycle_count + 6}
   end
 
-  # branch if the given function evaluates to true
+  @doc """
+  branch if the given function evaluates to true
+  """
   def branch_if(cpu, fun) do
     if fun.(cpu) do
       byte_address = AddressingMode.get_address(:relative, cpu)
@@ -570,7 +596,9 @@ defmodule Belmont.CPU do
     end
   end
 
-  # push a copy of the flag register onto the stack
+  @doc """
+  push a copy of the flag register onto the stack
+  """
   def php(cpu) do
     # the unused flags need to be set before pushing the value only
     byte =
@@ -584,7 +612,9 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + 3)
   end
 
-  # push a copy of the accumulator onto the stack
+  @doc """
+  push a copy of the accumulator onto the stack
+  """
   def pha(cpu) do
     cpu
     |> push_byte_onto_stack(cpu.registers.a)
@@ -592,7 +622,9 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + 3)
   end
 
-  # pop a byte off the stack and store it in the accumlator
+  @doc """
+  pop a byte off the stack and store it in the accumlator
+  """
   def pla(cpu) do
     {cpu, byte} = pop_byte_off_stack(cpu)
 
@@ -604,7 +636,9 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + 4)
   end
 
-  # pop a byte off the stack and set flags based on its value
+  @doc """
+  pop a byte off the stack and set flags based on its value
+  """
   def plp(cpu) do
     {cpu, byte} = pop_byte_off_stack(cpu)
 
