@@ -200,6 +200,26 @@ defmodule Belmont.CPU do
     |> String.upcase()
   end
 
+  # TODO remove me: temporary function to help debug status differences
+  def debug_flag_log(belmont, nestest) do
+    p = 15
+
+    (String.pad_trailing("", p) <>
+       String.pad_trailing("belmont #{Hexstr.hex(belmont)}", p) <>
+       String.pad_trailing("nestest #{Hexstr.hex(nestest)}", p))
+    |> IO.puts()
+
+    Enum.each(@flags, fn {key, flag} ->
+      belmont_set = band(belmont, flag) != 0
+      nestest_set = band(nestest, flag) != 0
+
+      (String.pad_trailing(Atom.to_string(key), p) <>
+         String.pad_trailing(inspect(belmont_set), p) <>
+         String.pad_trailing(inspect(nestest_set), p))
+      |> IO.puts()
+    end)
+  end
+
   # instruction logging
   def log(cpu, 0x08), do: log_state(cpu, 0x08, "PHP", :none)
   def log(cpu, 0x09), do: log_state(cpu, 0x09, "ORA", :byte)
@@ -218,6 +238,7 @@ defmodule Belmont.CPU do
   def log(cpu, 0x50), do: log_state(cpu, 0x50, "BVC", :byte)
   def log(cpu, 0x60), do: log_state(cpu, 0x60, "RTS", :none)
   def log(cpu, 0x68), do: log_state(cpu, 0x68, "PLA", :none)
+  def log(cpu, 0x69), do: log_state(cpu, 0x69, "ADC", :byte)
   def log(cpu, 0x70), do: log_state(cpu, 0x70, "BVS", :byte)
   def log(cpu, 0x78), do: log_state(cpu, 0x78, "SEI", :none)
   def log(cpu, 0x85), do: log_state(cpu, 0x85, "STA", :byte)
@@ -253,6 +274,7 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0x50), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :overflow) end)
   defp execute(cpu, 0x60), do: rts(cpu)
   defp execute(cpu, 0x68), do: pla(cpu)
+  defp execute(cpu, 0x69), do: adc(cpu, :immediate)
   defp execute(cpu, 0x70), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :overflow) end)
   defp execute(cpu, 0x78), do: set_flag_op(cpu, :interrupt)
   defp execute(cpu, 0x85), do: sta(cpu, :zero_page)
@@ -291,6 +313,41 @@ defmodule Belmont.CPU do
     |> unset_flag(flag)
     |> Map.put(:program_counter, cpu.program_counter + 1)
     |> Map.put(:cycle_count, cpu.cycle_count + 2)
+  end
+
+  # adds the contents of a memory location to the accumulator together with the carry bit
+  def adc(cpu, addressing_mode) do
+    acc = cpu.registers.a
+    byte_address = AddressingMode.get_address(addressing_mode, cpu)
+    byte = Memory.read_byte(cpu.memory, byte_address.address)
+    val = byte + acc + (cpu.registers.p &&& 0x01)
+
+    overflow = (acc ^^^ byte &&& 0x80) == 0x00 && (acc ^^^ val &&& 0x80) != 0x00
+
+    {pc, cycle} =
+      case addressing_mode do
+        :immediate -> {2, 2}
+        :zero_page -> {2, 3}
+        :zero_page_x -> {2, 4}
+        :absolute -> {3, 4}
+        :absolute_x -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
+        :absolute_y -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
+        :indexed_indirect -> {2, 6}
+        :indirect_indexed -> if byte_address.page_crossed, do: {2, 5}, else: {2, 6}
+      end
+
+    wrapped_val = rem(val, 256)
+
+    cpu =
+      cpu
+      |> set_register(:a, wrapped_val)
+      |> set_flag_with_test(:zero, wrapped_val)
+      |> set_flag_with_test(:negative, wrapped_val)
+      |> Map.put(:program_counter, cpu.program_counter + pc)
+      |> Map.put(:cycle_count, cpu.cycle_count + cycle)
+
+    cpu = if overflow, do: set_flag(cpu, :overflow), else: unset_flag(cpu, :overflow)
+    if val > 0xFF, do: set_flag(cpu, :carry), else: unset_flag(cpu, :carry)
   end
 
   # performs a logical operation on a byte in memory with the accumulator
