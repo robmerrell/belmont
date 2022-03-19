@@ -293,7 +293,7 @@ defmodule Belmont.CPUTest do
     end
   end
 
-  describe "ldx/2" do
+  describe "load_register/2" do
     setup do
       cpu =
         FakeROM.rom(
@@ -315,17 +315,17 @@ defmodule Belmont.CPUTest do
     end
 
     test "reads a value from memory and sets it to the x register", %{cpu: cpu} do
-      cpu = CPU.ldx(cpu, :immediate)
+      cpu = CPU.load_register(cpu, :immediate, :x)
       assert cpu.registers.x == 0x75
     end
 
     test "sets the negative flag", %{cpu: cpu} do
-      cpu = Map.put(cpu, :program_counter, 0x8002) |> CPU.ldx(:immediate)
+      cpu = Map.put(cpu, :program_counter, 0x8002) |> CPU.load_register(:immediate, :x)
       assert CPU.flag_set?(cpu, :negative) == true
     end
 
     test "sets the zero flag", %{cpu: cpu} do
-      cpu = Map.put(cpu, :program_counter, 0x8004) |> CPU.ldx(:immediate)
+      cpu = Map.put(cpu, :program_counter, 0x8004) |> CPU.load_register(:immediate, :x)
       assert CPU.flag_set?(cpu, :zero) == true
     end
   end

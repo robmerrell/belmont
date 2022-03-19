@@ -244,6 +244,7 @@ defmodule Belmont.CPU do
   def log(cpu, 0x85), do: log_state(cpu, 0x85, "STA", :byte)
   def log(cpu, 0x86), do: log_state(cpu, 0x86, "STX", :byte)
   def log(cpu, 0x90), do: log_state(cpu, 0x90, "BCC", :byte)
+  def log(cpu, 0xA0), do: log_state(cpu, 0xA0, "LDY", :byte)
   def log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
   def log(cpu, 0xA9), do: log_state(cpu, 0xA9, "LDA", :byte)
   def log(cpu, 0xB0), do: log_state(cpu, 0xB0, "BCS", :byte)
@@ -280,8 +281,9 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0x85), do: sta(cpu, :zero_page)
   defp execute(cpu, 0x86), do: stx(cpu, :zero_page)
   defp execute(cpu, 0x90), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :carry) end)
-  defp execute(cpu, 0xA2), do: ldx(cpu, :immediate)
-  defp execute(cpu, 0xA9), do: lda(cpu, :immediate)
+  defp execute(cpu, 0xA0), do: load_register(cpu, :immediate, :y)
+  defp execute(cpu, 0xA2), do: load_register(cpu, :immediate, :x)
+  defp execute(cpu, 0xA9), do: load_register(cpu, :immediate, :a)
   defp execute(cpu, 0xB0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :carry) end)
   defp execute(cpu, 0xB8), do: unset_flag_op(cpu, :overflow)
   defp execute(cpu, 0xC9), do: cmp(cpu, :immediate)
@@ -465,8 +467,8 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
   end
 
-  # load value read at address into the :x register
-  def ldx(cpu, addressing_mode) do
+  # load value read at address into the register
+  def load_register(cpu, addressing_mode, register) do
     byte_address = AddressingMode.get_address(addressing_mode, cpu)
     byte = Memory.read_byte(cpu.memory, byte_address.address)
 
@@ -480,7 +482,7 @@ defmodule Belmont.CPU do
       end
 
     cpu
-    |> set_register(:x, byte)
+    |> set_register(register, byte)
     |> set_flag_with_test(:zero, byte)
     |> set_flag_with_test(:negative, byte)
     |> Map.put(:program_counter, cpu.program_counter + pc)
