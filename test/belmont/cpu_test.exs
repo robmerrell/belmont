@@ -330,7 +330,7 @@ defmodule Belmont.CPUTest do
     end
   end
 
-  describe "stx/2" do
+  describe "store_register/2" do
     test "stores the x register in memory" do
       cpu =
         FakeROM.rom(
@@ -344,7 +344,7 @@ defmodule Belmont.CPUTest do
         |> CPU.new()
         |> Map.put(:program_counter, 0x8000)
         |> CPU.set_register(:x, 0x31)
-        |> CPU.stx(:zero_page)
+        |> CPU.store_register(:zero_page, :x)
 
       assert Memory.read_byte(cpu.memory, 0x0000) == 0x31
     end

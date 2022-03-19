@@ -278,8 +278,8 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0x69), do: adc(cpu, :immediate)
   defp execute(cpu, 0x70), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :overflow) end)
   defp execute(cpu, 0x78), do: set_flag_op(cpu, :interrupt)
-  defp execute(cpu, 0x85), do: sta(cpu, :zero_page)
-  defp execute(cpu, 0x86), do: stx(cpu, :zero_page)
+  defp execute(cpu, 0x85), do: store_register(cpu, :zero_page, :a)
+  defp execute(cpu, 0x86), do: store_register(cpu, :zero_page, :x)
   defp execute(cpu, 0x90), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :carry) end)
   defp execute(cpu, 0xA0), do: load_register(cpu, :immediate, :y)
   defp execute(cpu, 0xA2), do: load_register(cpu, :immediate, :x)
@@ -489,10 +489,10 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
   end
 
-  # stores the contents of the accumulator into memory
-  def sta(cpu, addressing_mode) do
+  # stores the contents of the register into memory
+  def store_register(cpu, addressing_mode, register) do
     address = AddressingMode.get_address(addressing_mode, cpu)
-    memory = Memory.write_byte(cpu.memory, address.address, cpu.registers.a)
+    memory = Memory.write_byte(cpu.memory, address.address, cpu.registers[register])
 
     {pc, cycle} =
       case addressing_mode do
@@ -503,21 +503,6 @@ defmodule Belmont.CPU do
         :absolute_y -> {3, 5}
         :indexed_indirect -> {2, 6}
         :indirect_indexed -> {2, 6}
-      end
-
-    %{cpu | memory: memory, program_counter: cpu.program_counter + pc, cycle_count: cpu.cycle_count + cycle}
-  end
-
-  # stores the contents of the :x register into memory
-  def stx(cpu, addressing_mode) do
-    address = AddressingMode.get_address(addressing_mode, cpu)
-    memory = Memory.write_byte(cpu.memory, address.address, cpu.registers.x)
-
-    {pc, cycle} =
-      case addressing_mode do
-        :zero_page -> {2, 3}
-        :zero_page_y -> {2, 4}
-        :absolute -> {2, 4}
       end
 
     %{cpu | memory: memory, program_counter: cpu.program_counter + pc, cycle_count: cpu.cycle_count + cycle}
