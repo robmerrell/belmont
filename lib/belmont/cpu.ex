@@ -249,9 +249,11 @@ defmodule Belmont.CPU do
   def log(cpu, 0xA9), do: log_state(cpu, 0xA9, "LDA", :byte)
   def log(cpu, 0xB0), do: log_state(cpu, 0xB0, "BCS", :byte)
   def log(cpu, 0xB8), do: log_state(cpu, 0xB8, "CLV", :none)
+  def log(cpu, 0xC0), do: log_state(cpu, 0xC0, "CPY", :byte)
   def log(cpu, 0xC9), do: log_state(cpu, 0xC9, "CMP", :byte)
   def log(cpu, 0xD0), do: log_state(cpu, 0xD0, "BNE", :byte)
   def log(cpu, 0xD8), do: log_state(cpu, 0xD8, "CLD", :none)
+  def log(cpu, 0xE0), do: log_state(cpu, 0xE0, "CPX", :byte)
   def log(cpu, 0xEA), do: log_state(cpu, 0xEA, "NOP", :none)
   def log(cpu, 0xF0), do: log_state(cpu, 0xF0, "BEQ", :byte)
   def log(cpu, 0xF8), do: log_state(cpu, 0xF8, "SED", :none)
@@ -286,9 +288,11 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0xA9), do: load_register(cpu, :immediate, :a)
   defp execute(cpu, 0xB0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :carry) end)
   defp execute(cpu, 0xB8), do: unset_flag_op(cpu, :overflow)
-  defp execute(cpu, 0xC9), do: cmp(cpu, :immediate)
+  defp execute(cpu, 0xC0), do: compare(cpu, :immediate, :y)
+  defp execute(cpu, 0xC9), do: compare(cpu, :immediate, :a)
   defp execute(cpu, 0xD0), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :zero) end)
   defp execute(cpu, 0xD8), do: unset_flag_op(cpu, :decimal)
+  defp execute(cpu, 0xE0), do: compare(cpu, :immediate, :x)
   defp execute(cpu, 0xEA), do: nop(cpu, :implied)
   defp execute(cpu, 0xF0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :zero) end)
   defp execute(cpu, 0xF8), do: set_flag_op(cpu, :decimal)
@@ -416,8 +420,8 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
   end
 
-  # compare accumulator with a byte from memory and sets flags
-  def cmp(cpu, addressing_mode) do
+  # compare register with a byte from memory and sets flags
+  def compare(cpu, addressing_mode, reg) do
     byte_address = AddressingMode.get_address(addressing_mode, cpu)
     byte = Memory.read_byte(cpu.memory, byte_address.address)
 
@@ -433,36 +437,11 @@ defmodule Belmont.CPU do
         :indirect_indexed -> if byte_address.page_crossed, do: {2, 5}, else: {2, 6}
       end
 
-    cpu = if cpu.registers.a >= byte, do: set_flag(cpu, :carry), else: unset_flag(cpu, :carry)
-    cpu = if cpu.registers.a == byte, do: set_flag(cpu, :zero), else: unset_flag(cpu, :zero)
+    cpu = if cpu.registers[reg] >= byte, do: set_flag(cpu, :carry), else: unset_flag(cpu, :carry)
+    cpu = if cpu.registers[reg] == byte, do: set_flag(cpu, :zero), else: unset_flag(cpu, :zero)
 
     cpu
-    |> set_flag_with_test(:negative, cpu.registers.a - byte)
-    |> Map.put(:program_counter, cpu.program_counter + pc)
-    |> Map.put(:cycle_count, cpu.cycle_count + cycle)
-  end
-
-  # load value read at address into the accumulator
-  def lda(cpu, addressing_mode) do
-    byte_address = AddressingMode.get_address(addressing_mode, cpu)
-    byte = Memory.read_byte(cpu.memory, byte_address.address)
-
-    {pc, cycle} =
-      case addressing_mode do
-        :immediate -> {2, 2}
-        :zero_page -> {2, 3}
-        :zero_page_x -> {2, 4}
-        :absolute -> {3, 4}
-        :absolute_x -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
-        :absolute_y -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
-        :indexed_indirect -> {2, 6}
-        :indirect_indexed -> if byte_address.page_crossed, do: {2, 5}, else: {2, 6}
-      end
-
-    cpu
-    |> set_register(:a, byte)
-    |> set_flag_with_test(:zero, byte)
-    |> set_flag_with_test(:negative, byte)
+    |> set_flag_with_test(:negative, cpu.registers[reg] - byte)
     |> Map.put(:program_counter, cpu.program_counter + pc)
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
   end
