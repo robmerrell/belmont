@@ -243,6 +243,7 @@ defmodule Belmont.CPU do
   def log(cpu, 0x78), do: log_state(cpu, 0x78, "SEI", :none)
   def log(cpu, 0x85), do: log_state(cpu, 0x85, "STA", :byte)
   def log(cpu, 0x86), do: log_state(cpu, 0x86, "STX", :byte)
+  def log(cpu, 0x88), do: log_state(cpu, 0x88, "DEY", :none)
   def log(cpu, 0x90), do: log_state(cpu, 0x90, "BCC", :byte)
   def log(cpu, 0xA0), do: log_state(cpu, 0xA0, "LDY", :byte)
   def log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
@@ -252,6 +253,7 @@ defmodule Belmont.CPU do
   def log(cpu, 0xC0), do: log_state(cpu, 0xC0, "CPY", :byte)
   def log(cpu, 0xC8), do: log_state(cpu, 0xC8, "INY", :none)
   def log(cpu, 0xC9), do: log_state(cpu, 0xC9, "CMP", :byte)
+  def log(cpu, 0xCA), do: log_state(cpu, 0xCA, "DEX", :none)
   def log(cpu, 0xD0), do: log_state(cpu, 0xD0, "BNE", :byte)
   def log(cpu, 0xD8), do: log_state(cpu, 0xD8, "CLD", :none)
   def log(cpu, 0xE0), do: log_state(cpu, 0xE0, "CPX", :byte)
@@ -284,6 +286,7 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0x70), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :overflow) end)
   defp execute(cpu, 0x78), do: set_flag_op(cpu, :interrupt)
   defp execute(cpu, 0x85), do: store_register(cpu, :zero_page, :a)
+  defp execute(cpu, 0x88), do: decrement_register(cpu, :y)
   defp execute(cpu, 0x86), do: store_register(cpu, :zero_page, :x)
   defp execute(cpu, 0x90), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :carry) end)
   defp execute(cpu, 0xA0), do: load_register(cpu, :immediate, :y)
@@ -294,6 +297,7 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0xC0), do: compare(cpu, :immediate, :y)
   defp execute(cpu, 0xC8), do: increment_register(cpu, :y)
   defp execute(cpu, 0xC9), do: compare(cpu, :immediate, :a)
+  defp execute(cpu, 0xCA), do: decrement_register(cpu, :x)
   defp execute(cpu, 0xD0), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :zero) end)
   defp execute(cpu, 0xD8), do: unset_flag_op(cpu, :decimal)
   defp execute(cpu, 0xE0), do: compare(cpu, :immediate, :x)
@@ -482,6 +486,21 @@ defmodule Belmont.CPU do
   def increment_register(cpu, reg) do
     val = cpu.registers[reg] + 1
     wrapped_val = rem(val, 256)
+
+    cpu
+    |> set_flag_with_test(:negative, wrapped_val)
+    |> set_flag_with_test(:zero, wrapped_val)
+    |> set_register(reg, wrapped_val)
+    |> Map.put(:program_counter, cpu.program_counter + 1)
+    |> Map.put(:cycle_count, cpu.cycle_count + 2)
+  end
+
+  @doc """
+  decrement the given register by 1
+  """
+  def decrement_register(cpu, reg) do
+    val = cpu.registers[reg] - 1
+    wrapped_val = if val < 0, do: 256 + val, else: val
 
     cpu
     |> set_flag_with_test(:negative, wrapped_val)
