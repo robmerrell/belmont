@@ -250,10 +250,12 @@ defmodule Belmont.CPU do
   def log(cpu, 0xB0), do: log_state(cpu, 0xB0, "BCS", :byte)
   def log(cpu, 0xB8), do: log_state(cpu, 0xB8, "CLV", :none)
   def log(cpu, 0xC0), do: log_state(cpu, 0xC0, "CPY", :byte)
+  def log(cpu, 0xC8), do: log_state(cpu, 0xC8, "INY", :none)
   def log(cpu, 0xC9), do: log_state(cpu, 0xC9, "CMP", :byte)
   def log(cpu, 0xD0), do: log_state(cpu, 0xD0, "BNE", :byte)
   def log(cpu, 0xD8), do: log_state(cpu, 0xD8, "CLD", :none)
   def log(cpu, 0xE0), do: log_state(cpu, 0xE0, "CPX", :byte)
+  def log(cpu, 0xE8), do: log_state(cpu, 0xE8, "INX", :none)
   def log(cpu, 0xE9), do: log_state(cpu, 0xE9, "SBC", :byte)
   def log(cpu, 0xEA), do: log_state(cpu, 0xEA, "NOP", :none)
   def log(cpu, 0xF0), do: log_state(cpu, 0xF0, "BEQ", :byte)
@@ -290,10 +292,12 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0xB0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :carry) end)
   defp execute(cpu, 0xB8), do: unset_flag_op(cpu, :overflow)
   defp execute(cpu, 0xC0), do: compare(cpu, :immediate, :y)
+  defp execute(cpu, 0xC8), do: increment_register(cpu, :y)
   defp execute(cpu, 0xC9), do: compare(cpu, :immediate, :a)
   defp execute(cpu, 0xD0), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :zero) end)
   defp execute(cpu, 0xD8), do: unset_flag_op(cpu, :decimal)
   defp execute(cpu, 0xE0), do: compare(cpu, :immediate, :x)
+  defp execute(cpu, 0xE8), do: increment_register(cpu, :x)
   defp execute(cpu, 0xE9), do: sbc(cpu, :immediate)
   defp execute(cpu, 0xEA), do: nop(cpu, :implied)
   defp execute(cpu, 0xF0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :zero) end)
@@ -456,6 +460,19 @@ defmodule Belmont.CPU do
     |> set_flag_with_test(:overflow, byte)
     |> Map.put(:program_counter, cpu.program_counter + pc)
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
+  end
+
+  # increment the given register by 1
+  def increment_register(cpu, reg) do
+    val = cpu.registers[reg] + 1
+    wrapped_val = rem(val, 256)
+
+    cpu
+    |> set_flag_with_test(:negative, wrapped_val)
+    |> set_flag_with_test(:zero, wrapped_val)
+    |> set_register(reg, wrapped_val)
+    |> Map.put(:program_counter, cpu.program_counter + 1)
+    |> Map.put(:cycle_count, cpu.cycle_count + 2)
   end
 
   # compare register with a byte from memory and sets flags

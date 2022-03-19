@@ -220,6 +220,25 @@ defmodule Belmont.CPUTest do
     end
   end
 
+  describe "increment_register/2" do
+    test "increments the given register by 1" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0000, value: 0xC8]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> CPU.set_register(:y, 255)
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.increment_register(:y)
+
+      assert cpu.registers.y == 0
+    end
+  end
+
   describe "compare/3" do
     setup do
       cpu =
