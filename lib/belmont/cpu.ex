@@ -254,6 +254,7 @@ defmodule Belmont.CPU do
   def log(cpu, 0xD0), do: log_state(cpu, 0xD0, "BNE", :byte)
   def log(cpu, 0xD8), do: log_state(cpu, 0xD8, "CLD", :none)
   def log(cpu, 0xE0), do: log_state(cpu, 0xE0, "CPX", :byte)
+  def log(cpu, 0xE9), do: log_state(cpu, 0xE9, "SBC", :byte)
   def log(cpu, 0xEA), do: log_state(cpu, 0xEA, "NOP", :none)
   def log(cpu, 0xF0), do: log_state(cpu, 0xF0, "BEQ", :byte)
   def log(cpu, 0xF8), do: log_state(cpu, 0xF8, "SED", :none)
@@ -293,11 +294,13 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0xD0), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :zero) end)
   defp execute(cpu, 0xD8), do: unset_flag_op(cpu, :decimal)
   defp execute(cpu, 0xE0), do: compare(cpu, :immediate, :x)
+  defp execute(cpu, 0xE9), do: sbc(cpu, :immediate)
   defp execute(cpu, 0xEA), do: nop(cpu, :implied)
   defp execute(cpu, 0xF0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :zero) end)
   defp execute(cpu, 0xF8), do: set_flag_op(cpu, :decimal)
 
   defp execute(cpu, opcode) do
+    :timer.sleep(500)
     raise("Undefined opcode: #{Hexstr.hex(opcode, 2)} at #{Hexstr.hex(cpu.program_counter, 4)}")
   end
 
@@ -354,6 +357,41 @@ defmodule Belmont.CPU do
 
     cpu = if overflow, do: set_flag(cpu, :overflow), else: unset_flag(cpu, :overflow)
     if val > 0xFF, do: set_flag(cpu, :carry), else: unset_flag(cpu, :carry)
+  end
+
+  # subtracts the contents of a memory location from the accumulator together with the carry bit
+  def sbc(cpu, addressing_mode) do
+    acc = cpu.registers.a
+    byte_address = AddressingMode.get_address(addressing_mode, cpu)
+    byte = Memory.read_byte(cpu.memory, byte_address.address)
+    val = acc - byte - 1 + (cpu.registers.p &&& 0x01)
+
+    overflow = (Bitwise.bxor(acc, byte) &&& 0x80) != 0x00 && (Bitwise.bxor(acc, val) &&& 0x80) != 0x00
+
+    {pc, cycle} =
+      case addressing_mode do
+        :immediate -> {2, 2}
+        :zero_page -> {2, 3}
+        :zero_page_x -> {2, 4}
+        :absolute -> {3, 4}
+        :absolute_x -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
+        :absolute_y -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
+        :indexed_indirect -> {2, 6}
+        :indirect_indexed -> if byte_address.page_crossed, do: {2, 5}, else: {2, 6}
+      end
+
+    wrapped_val = if val < 0, do: 256 + val, else: val
+
+    cpu =
+      cpu
+      |> set_register(:a, wrapped_val)
+      |> set_flag_with_test(:zero, wrapped_val)
+      |> set_flag_with_test(:negative, wrapped_val)
+      |> Map.put(:program_counter, cpu.program_counter + pc)
+      |> Map.put(:cycle_count, cpu.cycle_count + cycle)
+
+    cpu = if overflow, do: set_flag(cpu, :overflow), else: unset_flag(cpu, :overflow)
+    if val >= 0, do: set_flag(cpu, :carry), else: unset_flag(cpu, :carry)
   end
 
   # performs a logical operation on a byte in memory with the accumulator
