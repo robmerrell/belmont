@@ -351,6 +351,25 @@ defmodule Belmont.CPUTest do
     end
   end
 
+  describe "transfer_accumulator/2" do
+    test "copies a to the register" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0000, value: 0xAA]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> CPU.set_register(:a, 0xEE)
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.transfer_accumulator(:y)
+
+      assert cpu.registers.y == 0xEE
+    end
+  end
+
   describe "jsr/2" do
     test "should push the return point onto the stack and jump to a location" do
       cpu =

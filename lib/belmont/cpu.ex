@@ -247,7 +247,9 @@ defmodule Belmont.CPU do
   def log(cpu, 0x90), do: log_state(cpu, 0x90, "BCC", :byte)
   def log(cpu, 0xA0), do: log_state(cpu, 0xA0, "LDY", :byte)
   def log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
+  def log(cpu, 0xA8), do: log_state(cpu, 0xA8, "TAY", :none)
   def log(cpu, 0xA9), do: log_state(cpu, 0xA9, "LDA", :byte)
+  def log(cpu, 0xAA), do: log_state(cpu, 0xAA, "TAX", :none)
   def log(cpu, 0xB0), do: log_state(cpu, 0xB0, "BCS", :byte)
   def log(cpu, 0xB8), do: log_state(cpu, 0xB8, "CLV", :none)
   def log(cpu, 0xC0), do: log_state(cpu, 0xC0, "CPY", :byte)
@@ -291,7 +293,9 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0x90), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :carry) end)
   defp execute(cpu, 0xA0), do: load_register(cpu, :immediate, :y)
   defp execute(cpu, 0xA2), do: load_register(cpu, :immediate, :x)
+  defp execute(cpu, 0xA8), do: transfer_accumulator(cpu, :y)
   defp execute(cpu, 0xA9), do: load_register(cpu, :immediate, :a)
+  defp execute(cpu, 0xAA), do: transfer_accumulator(cpu, :x)
   defp execute(cpu, 0xB0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :carry) end)
   defp execute(cpu, 0xB8), do: unset_flag_op(cpu, :overflow)
   defp execute(cpu, 0xC0), do: compare(cpu, :immediate, :y)
@@ -308,7 +312,6 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0xF8), do: set_flag_op(cpu, :decimal)
 
   defp execute(cpu, opcode) do
-    :timer.sleep(500)
     raise("Undefined opcode: #{Hexstr.hex(opcode, 2)} at #{Hexstr.hex(cpu.program_counter, 4)}")
   end
 
@@ -579,6 +582,18 @@ defmodule Belmont.CPU do
       end
 
     %{cpu | memory: memory, program_counter: cpu.program_counter + pc, cycle_count: cpu.cycle_count + cycle}
+  end
+
+  @doc """
+  transfers the accumulator value to the given register.
+  """
+  def transfer_accumulator(cpu, reg) do
+    cpu
+    |> set_register(reg, cpu.registers.a)
+    |> set_flag_with_test(:zero, cpu.registers.a)
+    |> set_flag_with_test(:negative, cpu.registers.a)
+    |> Map.put(:program_counter, cpu.program_counter + 1)
+    |> Map.put(:cycle_count, cpu.cycle_count + 2)
   end
 
   @doc """
