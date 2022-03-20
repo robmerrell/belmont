@@ -364,7 +364,7 @@ defmodule Belmont.CPUTest do
         |> CPU.new()
         |> CPU.set_register(:a, 0xEE)
         |> Map.put(:program_counter, 0x8000)
-        |> CPU.transfer_accumulator(:y)
+        |> CPU.transfer_accumulator(:a, :y)
 
       assert cpu.registers.y == 0xEE
     end

@@ -244,7 +244,9 @@ defmodule Belmont.CPU do
   def log(cpu, 0x85), do: log_state(cpu, 0x85, "STA", :byte)
   def log(cpu, 0x86), do: log_state(cpu, 0x86, "STX", :byte)
   def log(cpu, 0x88), do: log_state(cpu, 0x88, "DEY", :none)
+  def log(cpu, 0x8A), do: log_state(cpu, 0x8A, "TXA", :none)
   def log(cpu, 0x90), do: log_state(cpu, 0x90, "BCC", :byte)
+  def log(cpu, 0x98), do: log_state(cpu, 0x98, "TYA", :none)
   def log(cpu, 0xA0), do: log_state(cpu, 0xA0, "LDY", :byte)
   def log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
   def log(cpu, 0xA8), do: log_state(cpu, 0xA8, "TAY", :none)
@@ -290,12 +292,14 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0x85), do: store_register(cpu, :zero_page, :a)
   defp execute(cpu, 0x88), do: decrement_register(cpu, :y)
   defp execute(cpu, 0x86), do: store_register(cpu, :zero_page, :x)
+  defp execute(cpu, 0x8A), do: transfer_accumulator(cpu, :x, :a)
   defp execute(cpu, 0x90), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :carry) end)
+  defp execute(cpu, 0x98), do: transfer_accumulator(cpu, :y, :a)
   defp execute(cpu, 0xA0), do: load_register(cpu, :immediate, :y)
   defp execute(cpu, 0xA2), do: load_register(cpu, :immediate, :x)
-  defp execute(cpu, 0xA8), do: transfer_accumulator(cpu, :y)
+  defp execute(cpu, 0xA8), do: transfer_accumulator(cpu, :a, :y)
   defp execute(cpu, 0xA9), do: load_register(cpu, :immediate, :a)
-  defp execute(cpu, 0xAA), do: transfer_accumulator(cpu, :x)
+  defp execute(cpu, 0xAA), do: transfer_accumulator(cpu, :a, :x)
   defp execute(cpu, 0xB0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :carry) end)
   defp execute(cpu, 0xB8), do: unset_flag_op(cpu, :overflow)
   defp execute(cpu, 0xC0), do: compare(cpu, :immediate, :y)
@@ -587,11 +591,11 @@ defmodule Belmont.CPU do
   @doc """
   transfers the accumulator value to the given register.
   """
-  def transfer_accumulator(cpu, reg) do
+  def transfer_accumulator(cpu, source, target) do
     cpu
-    |> set_register(reg, cpu.registers.a)
-    |> set_flag_with_test(:zero, cpu.registers.a)
-    |> set_flag_with_test(:negative, cpu.registers.a)
+    |> set_register(target, cpu.registers[source])
+    |> set_flag_with_test(:zero, cpu.registers[source])
+    |> set_flag_with_test(:negative, cpu.registers[source])
     |> Map.put(:program_counter, cpu.program_counter + 1)
     |> Map.put(:cycle_count, cpu.cycle_count + 2)
   end
