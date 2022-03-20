@@ -28,6 +28,7 @@ defmodule Mix.Tasks.Nestest do
 
     if !log_lines_match?(log, nestest_log) do
       IO.puts("mistmatched log lines: \n#{log} -- Belmont\n#{nestest_log} -- Nestest")
+      :timer.sleep(500)
       Process.exit(self(), :normal)
     end
 

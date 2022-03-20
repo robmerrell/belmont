@@ -254,6 +254,7 @@ defmodule Belmont.CPU do
   def log(cpu, 0xAA), do: log_state(cpu, 0xAA, "TAX", :none)
   def log(cpu, 0xB0), do: log_state(cpu, 0xB0, "BCS", :byte)
   def log(cpu, 0xB8), do: log_state(cpu, 0xB8, "CLV", :none)
+  def log(cpu, 0xBA), do: log_state(cpu, 0xBA, "TSX", :none)
   def log(cpu, 0xC0), do: log_state(cpu, 0xC0, "CPY", :byte)
   def log(cpu, 0xC8), do: log_state(cpu, 0xC8, "INY", :none)
   def log(cpu, 0xC9), do: log_state(cpu, 0xC9, "CMP", :byte)
@@ -302,6 +303,7 @@ defmodule Belmont.CPU do
   defp execute(cpu, 0xAA), do: transfer_accumulator(cpu, :a, :x)
   defp execute(cpu, 0xB0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :carry) end)
   defp execute(cpu, 0xB8), do: unset_flag_op(cpu, :overflow)
+  defp execute(cpu, 0xBA), do: transfer_stack_x(cpu)
   defp execute(cpu, 0xC0), do: compare(cpu, :immediate, :y)
   defp execute(cpu, 0xC8), do: increment_register(cpu, :y)
   defp execute(cpu, 0xC9), do: compare(cpu, :immediate, :a)
@@ -596,6 +598,18 @@ defmodule Belmont.CPU do
     |> set_register(target, cpu.registers[source])
     |> set_flag_with_test(:zero, cpu.registers[source])
     |> set_flag_with_test(:negative, cpu.registers[source])
+    |> Map.put(:program_counter, cpu.program_counter + 1)
+    |> Map.put(:cycle_count, cpu.cycle_count + 2)
+  end
+
+  @doc """
+  transfers the stack pointer to the x register.
+  """
+  def transfer_stack_x(cpu) do
+    cpu
+    |> set_register(:x, cpu.stack_pointer)
+    |> set_flag_with_test(:zero, cpu.stack_pointer)
+    |> set_flag_with_test(:negative, cpu.stack_pointer)
     |> Map.put(:program_counter, cpu.program_counter + 1)
     |> Map.put(:cycle_count, cpu.cycle_count + 2)
   end

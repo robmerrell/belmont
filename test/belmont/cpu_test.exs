@@ -370,6 +370,24 @@ defmodule Belmont.CPUTest do
     end
   end
 
+  describe "transfer_stack_x/1" do
+    test "copies the stack pointer to the x register" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0000, value: 0xBA]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.transfer_stack_x()
+
+      assert cpu.registers.x == 0xFD
+    end
+  end
+
   describe "jsr/2" do
     test "should push the return point onto the stack and jump to a location" do
       cpu =
