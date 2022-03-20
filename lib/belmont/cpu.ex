@@ -14,7 +14,6 @@ defmodule Belmont.CPU do
   """
 
   use Bitwise
-  import Belmont.CPU.Instruction
   alias Belmont.CPU.AddressingMode
   alias Belmont.Memory
   alias Belmont.Hexstr
@@ -155,14 +154,14 @@ defmodule Belmont.CPU do
   @spec step(t()) :: t()
   def step(cpu) do
     opcode = Memory.read_byte(cpu.memory, cpu.program_counter)
-    execute(cpu, opcode)
+    Belmont.CPU.Instructions.execute(cpu, opcode)
     # |> step()
   end
 
   # Logs an instruction and the current state of the CPU using a format that can be compared
   # against output from nestest logs. We aren't logging the full mnemonic of the instruction,
   # because it isn't needed.
-  defp log_state(cpu, opcode, mnemonic, operand_size) do
+  def log_state(cpu, opcode, mnemonic, operand_size) do
     pc = Hexstr.hex(cpu.program_counter, 4)
     op = Hexstr.hex(opcode, 2)
     stack_pointer = Hexstr.hex(cpu.stack_pointer, 2)
@@ -219,119 +218,6 @@ defmodule Belmont.CPU do
          String.pad_trailing(inspect(nestest_set), p))
       |> IO.puts()
     end)
-  end
-
-  # instruction logging
-  def log(cpu, 0x08), do: log_state(cpu, 0x08, "PHP", :none)
-  def log(cpu, 0x09), do: log_state(cpu, 0x09, "ORA", :byte)
-  def log(cpu, 0x10), do: log_state(cpu, 0x10, "BPL", :byte)
-  def log(cpu, 0x18), do: log_state(cpu, 0x18, "CLC", :none)
-  def log(cpu, 0x20), do: log_state(cpu, 0x20, "JSR", :word)
-  def log(cpu, 0x24), do: log_state(cpu, 0x24, "BIT", :byte)
-  def log(cpu, 0x28), do: log_state(cpu, 0x28, "PLP", :none)
-  def log(cpu, 0x29), do: log_state(cpu, 0x29, "AND", :byte)
-  def log(cpu, 0x2C), do: log_state(cpu, 0x2C, "BIT", :word)
-  def log(cpu, 0x30), do: log_state(cpu, 0x30, "BMI", :byte)
-  def log(cpu, 0x38), do: log_state(cpu, 0x38, "SEC", :none)
-  def log(cpu, 0x48), do: log_state(cpu, 0x48, "PHA", :none)
-  def log(cpu, 0x49), do: log_state(cpu, 0x49, "EOR", :byte)
-  def log(cpu, 0x4C), do: log_state(cpu, 0x4C, "JMP", :word)
-  def log(cpu, 0x50), do: log_state(cpu, 0x50, "BVC", :byte)
-  def log(cpu, 0x60), do: log_state(cpu, 0x60, "RTS", :none)
-  def log(cpu, 0x68), do: log_state(cpu, 0x68, "PLA", :none)
-  def log(cpu, 0x69), do: log_state(cpu, 0x69, "ADC", :byte)
-  def log(cpu, 0x70), do: log_state(cpu, 0x70, "BVS", :byte)
-  def log(cpu, 0x78), do: log_state(cpu, 0x78, "SEI", :none)
-  def log(cpu, 0x85), do: log_state(cpu, 0x85, "STA", :byte)
-  # def log(cpu, 0x86), do: log_state(cpu, 0x86, "STX", :byte)
-  def log(cpu, 0x88), do: log_state(cpu, 0x88, "DEY", :none)
-  def log(cpu, 0x8A), do: log_state(cpu, 0x8A, "TXA", :none)
-  # def log(cpu, 0x8E), do: log_state(cpu, 0x8E, "STX", :word)
-  def log(cpu, 0x90), do: log_state(cpu, 0x90, "BCC", :byte)
-  def log(cpu, 0x98), do: log_state(cpu, 0x98, "TYA", :none)
-  def log(cpu, 0xA0), do: log_state(cpu, 0xA0, "LDY", :byte)
-  def log(cpu, 0xA2), do: log_state(cpu, 0xA2, "LDX", :byte)
-  def log(cpu, 0xA8), do: log_state(cpu, 0xA8, "TAY", :none)
-  def log(cpu, 0xA9), do: log_state(cpu, 0xA9, "LDA", :byte)
-  def log(cpu, 0xAA), do: log_state(cpu, 0xAA, "TAX", :none)
-  def log(cpu, 0xB0), do: log_state(cpu, 0xB0, "BCS", :byte)
-  def log(cpu, 0xB8), do: log_state(cpu, 0xB8, "CLV", :none)
-  def log(cpu, 0xBA), do: log_state(cpu, 0xBA, "TSX", :none)
-  def log(cpu, 0xC0), do: log_state(cpu, 0xC0, "CPY", :byte)
-  def log(cpu, 0xC8), do: log_state(cpu, 0xC8, "INY", :none)
-  def log(cpu, 0xC9), do: log_state(cpu, 0xC9, "CMP", :byte)
-  def log(cpu, 0xCA), do: log_state(cpu, 0xCA, "DEX", :none)
-  def log(cpu, 0xD0), do: log_state(cpu, 0xD0, "BNE", :byte)
-  def log(cpu, 0xD8), do: log_state(cpu, 0xD8, "CLD", :none)
-  def log(cpu, 0xE0), do: log_state(cpu, 0xE0, "CPX", :byte)
-  def log(cpu, 0xE8), do: log_state(cpu, 0xE8, "INX", :none)
-  def log(cpu, 0xE9), do: log_state(cpu, 0xE9, "SBC", :byte)
-  def log(cpu, 0xEA), do: log_state(cpu, 0xEA, "NOP", :none)
-  def log(cpu, 0xF0), do: log_state(cpu, 0xF0, "BEQ", :byte)
-  def log(cpu, 0xF8), do: log_state(cpu, 0xF8, "SED", :none)
-
-  definstr stx(cpu, 0x86, :byte), do: store_register(cpu, :zero_page, :x)
-  definstr stx(cpu, 0x8E, :word), do: store_register(cpu, :absolute, :x)
-
-  # definstr php(cpu, 0x08, :none), do: php(cpu)
-  # def log(cpu, 0x86), do: log_state(cpu, 0x86, "STX", :byte)
-  # def log(cpu, 0x8E), do: log_state(cpu, 0x8E, "STX", :word)
-  # defp execute(cpu, 0x86), do: store_register(cpu, :zero_page, :x)
-  # defp execute(cpu, 0x8E), do: store_register(cpu, :absolute, :x)
-
-  def log(cpu, opcode), do: log_state(cpu, opcode, "UNDEF", :byte)
-
-  # instruction execution
-  defp execute(cpu, 0x08), do: php(cpu)
-  defp execute(cpu, 0x09), do: logical_op(cpu, :immediate, :or)
-  defp execute(cpu, 0x10), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :negative) end)
-  defp execute(cpu, 0x18), do: unset_flag_op(cpu, :carry)
-  defp execute(cpu, 0x20), do: jsr(cpu, :absolute)
-  defp execute(cpu, 0x24), do: bit(cpu, :zero_page)
-  defp execute(cpu, 0x28), do: plp(cpu)
-  defp execute(cpu, 0x29), do: logical_op(cpu, :immediate, :and)
-  defp execute(cpu, 0x2C), do: bit(cpu, :absolute)
-  defp execute(cpu, 0x30), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :negative) end)
-  defp execute(cpu, 0x38), do: set_flag_op(cpu, :carry)
-  defp execute(cpu, 0x48), do: pha(cpu)
-  defp execute(cpu, 0x49), do: logical_op(cpu, :immediate, :eor)
-  defp execute(cpu, 0x4C), do: jmp(cpu, :absolute)
-  defp execute(cpu, 0x50), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :overflow) end)
-  defp execute(cpu, 0x60), do: rts(cpu)
-  defp execute(cpu, 0x68), do: pla(cpu)
-  defp execute(cpu, 0x69), do: adc(cpu, :immediate)
-  defp execute(cpu, 0x70), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :overflow) end)
-  defp execute(cpu, 0x78), do: set_flag_op(cpu, :interrupt)
-  defp execute(cpu, 0x85), do: store_register(cpu, :zero_page, :a)
-  # defp execute(cpu, 0x86), do: store_register(cpu, :zero_page, :x)
-  defp execute(cpu, 0x88), do: decrement_register(cpu, :y)
-  defp execute(cpu, 0x8A), do: transfer_accumulator(cpu, :x, :a)
-  # defp execute(cpu, 0x8E), do: store_register(cpu, :absolute, :x)
-  defp execute(cpu, 0x90), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :carry) end)
-  defp execute(cpu, 0x98), do: transfer_accumulator(cpu, :y, :a)
-  defp execute(cpu, 0xA0), do: load_register(cpu, :immediate, :y)
-  defp execute(cpu, 0xA2), do: load_register(cpu, :immediate, :x)
-  defp execute(cpu, 0xA8), do: transfer_accumulator(cpu, :a, :y)
-  defp execute(cpu, 0xA9), do: load_register(cpu, :immediate, :a)
-  defp execute(cpu, 0xAA), do: transfer_accumulator(cpu, :a, :x)
-  defp execute(cpu, 0xB0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :carry) end)
-  defp execute(cpu, 0xB8), do: unset_flag_op(cpu, :overflow)
-  defp execute(cpu, 0xBA), do: transfer_stack_x(cpu)
-  defp execute(cpu, 0xC0), do: compare(cpu, :immediate, :y)
-  defp execute(cpu, 0xC8), do: increment_register(cpu, :y)
-  defp execute(cpu, 0xC9), do: compare(cpu, :immediate, :a)
-  defp execute(cpu, 0xCA), do: decrement_register(cpu, :x)
-  defp execute(cpu, 0xD0), do: branch_if(cpu, fn cpu -> !flag_set?(cpu, :zero) end)
-  defp execute(cpu, 0xD8), do: unset_flag_op(cpu, :decimal)
-  defp execute(cpu, 0xE0), do: compare(cpu, :immediate, :x)
-  defp execute(cpu, 0xE8), do: increment_register(cpu, :x)
-  defp execute(cpu, 0xE9), do: sbc(cpu, :immediate)
-  defp execute(cpu, 0xEA), do: nop(cpu, :implied)
-  defp execute(cpu, 0xF0), do: branch_if(cpu, fn cpu -> flag_set?(cpu, :zero) end)
-  defp execute(cpu, 0xF8), do: set_flag_op(cpu, :decimal)
-
-  defp execute(cpu, opcode) do
-    raise("Undefined opcode: #{Hexstr.hex(opcode, 2)} at #{Hexstr.hex(cpu.program_counter, 4)}")
   end
 
   def nop(cpu, :implied) do

@@ -23,7 +23,7 @@ defmodule Mix.Tasks.Nestest do
 
   defp step(cpu, [nestest_log | log_tail]) do
     opcode = Belmont.Memory.read_byte(cpu.memory, cpu.program_counter)
-    log = Belmont.CPU.log(cpu, opcode)
+    log = Belmont.CPU.Instructions.log(cpu, opcode)
     IO.puts(log)
 
     if !log_lines_match?(log, nestest_log) do
