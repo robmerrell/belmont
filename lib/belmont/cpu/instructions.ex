@@ -39,6 +39,8 @@ defmodule Belmont.CPU.Instructions do
   definstr xA8(cpu, "TAY", :none), do: CPU.transfer_accumulator(cpu, :a, :y)
   definstr xA9(cpu, "LDA", :byte), do: CPU.load_register(cpu, :immediate, :a)
   definstr xAA(cpu, "TAX", :none), do: CPU.transfer_accumulator(cpu, :a, :x)
+  definstr xAD(cpu, "LDA", :word), do: CPU.load_register(cpu, :absolute, :a)
+  definstr xAE(cpu, "LDX", :word), do: CPU.load_register(cpu, :absolute, :x)
   definstr xB0(cpu, "BCS", :byte), do: CPU.branch_if(cpu, fn cpu -> CPU.flag_set?(cpu, :carry) end)
   definstr xB8(cpu, "CLV", :none), do: CPU.unset_flag_op(cpu, :overflow)
   definstr xBA(cpu, "TSX", :none), do: CPU.transfer_stack_x(cpu)
