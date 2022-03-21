@@ -11,12 +11,17 @@ defmodule Belmont.CPU.Definstr do
 
   Example:
 
-    definstr stx(cpu, 0x86, :byte), do: CPU.store_register(cpu, :zero_page, :x)
+    definstr x86(cpu, "STX", :byte), do: CPU.store_register(cpu, :zero_page, :x)
   """
   defmacro definstr(call, do: expr) do
     # extract the parts from call we need to generate the log and execute functions
-    {name, _meta, [_cpu, opcode, operand_size]} = call
-    mnemonic = name |> Atom.to_string() |> String.upcase() |> String.trim_trailing("_OP")
+    {opcode_str, _meta, [_cpu, mnemonic, operand_size]} = call
+
+    opcode =
+      opcode_str
+      |> Atom.to_string()
+      |> String.trim_leading("x")
+      |> String.to_integer(16)
 
     # define log/2 and execute/2 functions to be used in Belmont.CPU
     quote do
