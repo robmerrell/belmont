@@ -33,6 +33,7 @@ defmodule Belmont.CPU.Instructions do
   definstr x8E(cpu, "STX", :word), do: CPU.store_register(cpu, :absolute, :x)
   definstr x90(cpu, "BCC", :byte), do: CPU.branch_if(cpu, fn cpu -> !CPU.flag_set?(cpu, :carry) end)
   definstr x98(cpu, "TYA", :none), do: CPU.transfer_accumulator(cpu, :y, :a)
+  definstr x9A(cpu, "TXS", :none), do: CPU.transfer_x_stack(cpu)
   definstr xA0(cpu, "LDY", :byte), do: CPU.load_register(cpu, :immediate, :y)
   definstr xA2(cpu, "LDX", :byte), do: CPU.load_register(cpu, :immediate, :x)
   definstr xA8(cpu, "TAY", :none), do: CPU.transfer_accumulator(cpu, :a, :y)

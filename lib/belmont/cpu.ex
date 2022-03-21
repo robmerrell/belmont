@@ -514,6 +514,16 @@ defmodule Belmont.CPU do
   end
 
   @doc """
+  transfers the to the x register to the stack pointer.
+  """
+  def transfer_x_stack(cpu) do
+    cpu
+    |> Map.put(:program_counter, cpu.program_counter + 1)
+    |> Map.put(:cycle_count, cpu.cycle_count + 2)
+    |> Map.put(:stack_pointer, cpu.registers.x)
+  end
+
+  @doc """
   push the address (minus one) of the return point to the stack and set the program counter to the memory address
   """
   def jsr(cpu, addressing_mode) do
