@@ -407,6 +407,28 @@ defmodule Belmont.CPUTest do
     end
   end
 
+  describe "rti/1" do
+    test "sets the status register and program counter from stack" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0001, value: 0x40]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> CPU.push_word_onto_stack(0x3355)
+        |> CPU.push_byte_onto_stack(0x11)
+        |> CPU.set_register(:p, 0x00)
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.rti()
+
+      assert cpu.registers.p == 0x21
+      assert cpu.program_counter == 0x3355
+    end
+  end
+
   describe "jsr/2" do
     test "should push the return point onto the stack and jump to a location" do
       cpu =

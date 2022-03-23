@@ -17,6 +17,7 @@ defmodule Belmont.CPU.Instructions do
   definstr x2C(cpu, "BIT", :word), do: CPU.bit(cpu, :absolute)
   definstr x30(cpu, "BMI", :byte), do: CPU.branch_if(cpu, fn cpu -> CPU.flag_set?(cpu, :negative) end)
   definstr x38(cpu, "SEC", :none), do: CPU.set_flag_op(cpu, :carry)
+  definstr x40(cpu, "RTI", :none), do: CPU.rti(cpu)
   definstr x48(cpu, "PHA", :none), do: CPU.pha(cpu)
   definstr x49(cpu, "EOR", :byte), do: CPU.logical_op(cpu, :immediate, :eor)
   definstr x4C(cpu, "JMP", :word), do: CPU.jmp(cpu, :absolute)

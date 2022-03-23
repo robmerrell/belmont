@@ -524,6 +524,26 @@ defmodule Belmont.CPU do
   end
 
   @doc """
+  pulls the processor flags from the stack followed by the program counter
+  """
+  def rti(cpu) do
+    {cpu, flag} = pop_byte_off_stack(cpu)
+
+    # make the unused flags match the nestest logs
+    flag = flag &&& bnot(@flags[:unused_1])
+    flag = bor(flag, @flags[:unused_2])
+
+    {cpu, high} = pop_byte_off_stack(cpu)
+    {cpu, low} = pop_byte_off_stack(cpu)
+    address = high ||| low <<< 8
+
+    cpu
+    |> set_register(:p, flag)
+    |> Map.put(:program_counter, address)
+    |> Map.put(:cycle_count, cpu.cycle_count + 6)
+  end
+
+  @doc """
   push the address (minus one) of the return point to the stack and set the program counter to the memory address
   """
   def jsr(cpu, addressing_mode) do
