@@ -367,6 +367,38 @@ defmodule Belmont.CPU do
   end
 
   @doc """
+  Logical shift accumulator or byte right
+  """
+  def lsr(cpu, addressing_mode) do
+    byte =
+      if addressing_mode == :accumulator do
+        cpu.registers.a
+      else
+        byte_address = AddressingMode.get_address(addressing_mode, cpu)
+        Memory.read_byte(cpu.memory, byte_address.address)
+      end
+
+    {pc, cycle} =
+      case addressing_mode do
+        :accumulator -> {1, 2}
+        :zero_page -> {2, 5}
+        :zero_page_x -> {2, 6}
+        :absolute -> {3, 6}
+        :absolute_x -> {3, 7}
+      end
+
+    res = Bitwise.bsr(byte, 1)
+    cpu = if band(byte, @flags[:carry]) != 0, do: set_flag(cpu, :carry), else: unset_flag(cpu, :carry)
+
+    cpu
+    |> set_flag_with_test(:zero, res)
+    |> unset_flag(:negative)
+    |> set_register(:a, res)
+    |> Map.put(:program_counter, cpu.program_counter + pc)
+    |> Map.put(:cycle_count, cpu.cycle_count + cycle)
+  end
+
+  @doc """
   test if one or more bits are set
   """
   def bit(cpu, addressing_mode) do

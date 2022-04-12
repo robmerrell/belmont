@@ -20,6 +20,7 @@ defmodule Belmont.CPU.Instructions do
   definstr x40(cpu, "RTI", :none), do: CPU.rti(cpu)
   definstr x48(cpu, "PHA", :none), do: CPU.pha(cpu)
   definstr x49(cpu, "EOR", :byte), do: CPU.logical_op(cpu, :immediate, :eor)
+  definstr x4A(cpu, "LSR", :none), do: CPU.lsr(cpu, :accumulator)
   definstr x4C(cpu, "JMP", :word), do: CPU.jmp(cpu, :absolute)
   definstr x50(cpu, "BVC", :byte), do: CPU.branch_if(cpu, fn cpu -> !CPU.flag_set?(cpu, :overflow) end)
   definstr x60(cpu, "RTS", :none), do: CPU.rts(cpu)
