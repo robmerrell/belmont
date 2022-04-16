@@ -175,6 +175,25 @@ defmodule Belmont.CPUTest do
     end
   end
 
+  describe "asl/2" do
+    test "shift left" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0000, value: 0x4A]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> CPU.set_register(:a, 0x02)
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.asl(:accumulator)
+
+      assert cpu.registers.a == 0x04
+    end
+  end
+
   describe "lsr/2" do
     test "shift right" do
       cpu =

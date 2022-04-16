@@ -8,6 +8,7 @@ defmodule Belmont.CPU.Instructions do
 
   definstr x08(cpu, "PHP", :none), do: CPU.php(cpu)
   definstr x09(cpu, "ORA", :byte), do: CPU.logical_op(cpu, :immediate, :or)
+  definstr x0A(cpu, "ASL", :none), do: CPU.asl(cpu, :accumulator)
   definstr x10(cpu, "BPL", :byte), do: CPU.branch_if(cpu, fn cpu -> !CPU.flag_set?(cpu, :negative) end)
   definstr x18(cpu, "CLC", :none), do: CPU.unset_flag_op(cpu, :carry)
   definstr x20(cpu, "JSR", :word), do: CPU.jsr(cpu, :absolute)
