@@ -27,6 +27,7 @@ defmodule Belmont.CPU.Instructions do
   definstr x60(cpu, "RTS", :none), do: CPU.rts(cpu)
   definstr x68(cpu, "PLA", :none), do: CPU.pla(cpu)
   definstr x69(cpu, "ADC", :byte), do: CPU.adc(cpu, :immediate)
+  definstr x6A(cpu, "ROR", :none), do: CPU.ror(cpu, :accumulator)
   definstr x70(cpu, "BVS", :byte), do: CPU.branch_if(cpu, fn cpu -> CPU.flag_set?(cpu, :overflow) end)
   definstr x78(cpu, "SEI", :none), do: CPU.set_flag_op(cpu, :interrupt)
   definstr x85(cpu, "STA", :byte), do: CPU.store_register(cpu, :zero_page, :a)

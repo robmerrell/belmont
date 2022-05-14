@@ -12,4 +12,14 @@ defmodule Belmont.Hexstr do
     |> Integer.to_string(16)
     |> String.pad_leading(padding, "0")
   end
+
+  @doc """
+  Converts an integer a string of bits
+  """
+  @spec bin(integer()) :: String.t()
+  def bin(number) do
+    number
+    |> Integer.to_string(2)
+    |> String.pad_leading(8, "0")
+  end
 end
