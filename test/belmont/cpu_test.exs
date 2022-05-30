@@ -233,6 +233,26 @@ defmodule Belmont.CPUTest do
     end
   end
 
+  describe "rol/2" do
+    test "rotate accumulator right" do
+      cpu =
+        FakeROM.rom(
+          prg_rom_data_override: [
+            [bank: 0, location: 0x0000, value: 0x6A]
+          ]
+        )
+        |> Cartridge.parse_rom_contents!()
+        |> Memory.new()
+        |> CPU.new()
+        |> CPU.set_register(:a, 0x01)
+        |> CPU.set_register(:p, 0x65)
+        |> Map.put(:program_counter, 0x8000)
+        |> CPU.rol(:accumulator)
+
+      assert cpu.registers.a == 0x03
+    end
+  end
+
   describe "bit/2" do
     setup do
       cpu =

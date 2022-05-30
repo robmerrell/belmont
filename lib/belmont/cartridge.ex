@@ -83,7 +83,7 @@ defmodule Belmont.Cartridge do
         _rest::binary>> = rom
 
       # get the mapper number
-      <<mapper>> = <<upper_mapper::size(4), lower_mapper::size(4)>>
+      <<mapper>> = <<upper_mapper::4, lower_mapper::4>>
 
       # get the mirroring mode
       mirroring_mode =

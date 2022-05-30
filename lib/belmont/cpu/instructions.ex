@@ -15,6 +15,7 @@ defmodule Belmont.CPU.Instructions do
   definstr x24(cpu, "BIT", :byte), do: CPU.bit(cpu, :zero_page)
   definstr x28(cpu, "PLP", :none), do: CPU.plp(cpu)
   definstr x29(cpu, "AND", :byte), do: CPU.logical_op(cpu, :immediate, :and)
+  definstr x2A(cpu, "ROL", :none), do: CPU.rol(cpu, :accumulator)
   definstr x2C(cpu, "BIT", :word), do: CPU.bit(cpu, :absolute)
   definstr x30(cpu, "BMI", :byte), do: CPU.branch_if(cpu, fn cpu -> CPU.flag_set?(cpu, :negative) end)
   definstr x38(cpu, "SEC", :none), do: CPU.set_flag_op(cpu, :carry)
