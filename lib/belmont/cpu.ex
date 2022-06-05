@@ -590,6 +590,7 @@ defmodule Belmont.CPU do
         :zero_page_y -> {2, 4}
         :absolute -> {3, 4}
         :absolute_y -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
+        :indexed_indirect -> {2, 6}
       end
 
     cpu

@@ -41,6 +41,7 @@ defmodule Belmont.CPU.Instructions do
   definstr x98(cpu, "TYA", :none), do: CPU.transfer_accumulator(cpu, :y, :a)
   definstr x9A(cpu, "TXS", :none), do: CPU.transfer_x_stack(cpu)
   definstr xA0(cpu, "LDY", :byte), do: CPU.load_register(cpu, :immediate, :y)
+  definstr xA1(cpu, "LDA", :byte), do: CPU.load_register(cpu, :indexed_indirect, :a)
   definstr xA2(cpu, "LDX", :byte), do: CPU.load_register(cpu, :immediate, :x)
   definstr xA5(cpu, "LDA", :byte), do: CPU.load_register(cpu, :zero_page, :a)
   definstr xA8(cpu, "TAY", :none), do: CPU.transfer_accumulator(cpu, :a, :y)

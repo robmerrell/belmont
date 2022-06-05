@@ -17,8 +17,8 @@ defmodule Belmont.CPU.AddressingMode do
   * absolute
   * absolute_x
   * absolute_y
-  * indirect
   * indexed_indirect
+  * indirect_indexed
   * immediate
   * implied
   * accumulator
@@ -43,7 +43,7 @@ defmodule Belmont.CPU.AddressingMode do
 
   # indirect addresses.
   def get_address(:indirect, cpu_state), do: indirect_address(cpu_state, 0)
-  def get_address(:indexed_indirect, cpu_state), do: indirect_address(cpu_state, cpu_state.registers.x)
+  def get_address(:indexed_indirect, cpu_state), do: indexed_indirect_address(cpu_state, cpu_state.registers.x)
 
   # immediate address
   def get_address(:immediate, cpu_state),
@@ -86,6 +86,15 @@ defmodule Belmont.CPU.AddressingMode do
 
   defp indirect_address(cpu_state, addend) do
     address = Memory.read_word(cpu_state.memory, cpu_state.program_counter + 1) + addend
+
+    low_byte = Memory.read_byte(cpu_state.memory, address)
+    high_byte = Memory.read_byte(cpu_state.memory, address + 1)
+
+    %__MODULE__{address: high_byte <<< 8 ||| low_byte, page_crossed: false, additional_cycles: 0}
+  end
+
+  defp indexed_indirect_address(cpu_state, addend) do
+    address = Memory.read_word(cpu_state.memory, cpu_state.program_counter + 1) + addend &&& 0xFF
 
     low_byte = Memory.read_byte(cpu_state.memory, address)
     high_byte = Memory.read_byte(cpu_state.memory, address + 1)
