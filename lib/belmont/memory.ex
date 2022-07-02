@@ -108,7 +108,6 @@ defmodule Belmont.Memory do
   def write_byte(memory, location, value) do
     cond do
       location < 0x2000 ->
-        # write to RAM
         ram = put_elem(memory.ram, rem(location, 0x800), value)
         %{memory | ram: ram}
 

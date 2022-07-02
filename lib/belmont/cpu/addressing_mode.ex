@@ -9,6 +9,8 @@ defmodule Belmont.CPU.AddressingMode do
 
   defstruct address: 0x0000, page_crossed: false, additional_cycles: 0
 
+  # TODO: Some of these need extra wrap-around protection when reading a byte
+
   @doc """
   Get a memory address using the given addressing mode. Accepted modes are:
   * zero_page
@@ -95,9 +97,10 @@ defmodule Belmont.CPU.AddressingMode do
 
   defp indexed_indirect_address(cpu_state, addend) do
     address = Memory.read_word(cpu_state.memory, cpu_state.program_counter + 1) + addend &&& 0xFF
+    wrapped = rem(address + 1, 256)
 
     low_byte = Memory.read_byte(cpu_state.memory, address)
-    high_byte = Memory.read_byte(cpu_state.memory, address + 1)
+    high_byte = Memory.read_byte(cpu_state.memory, wrapped)
 
     %__MODULE__{address: high_byte <<< 8 ||| low_byte, page_crossed: false, additional_cycles: 0}
   end
