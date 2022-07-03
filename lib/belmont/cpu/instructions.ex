@@ -81,6 +81,7 @@ defmodule Belmont.CPU.Instructions do
   definstr xE1(cpu, "SBC", :byte), do: CPU.sbc(cpu, :indexed_indirect)
   definstr xE4(cpu, "CPX", :byte), do: CPU.compare(cpu, :zero_page, :x)
   definstr xE5(cpu, "SBC", :byte), do: CPU.sbc(cpu, :zero_page)
+  definstr xE6(cpu, "INC", :byte), do: CPU.increment_memory(cpu, :zero_page)
   definstr xE8(cpu, "INX", :none), do: CPU.increment_register(cpu, :x)
   definstr xE9(cpu, "SBC", :byte), do: CPU.sbc(cpu, :immediate)
   definstr xEA(cpu, "NOP", :none), do: CPU.nop(cpu, :implied)
