@@ -72,6 +72,7 @@ defmodule Belmont.CPU.Instructions do
   definstr xC1(cpu, "CMP", :byte), do: CPU.compare(cpu, :indexed_indirect, :a)
   definstr xC4(cpu, "CPY", :byte), do: CPU.compare(cpu, :zero_page, :y)
   definstr xC5(cpu, "CMP", :byte), do: CPU.compare(cpu, :zero_page, :a)
+  definstr xC6(cpu, "DEC", :byte), do: CPU.decrement_memory(cpu, :zero_page)
   definstr xC8(cpu, "INY", :none), do: CPU.increment_register(cpu, :y)
   definstr xC9(cpu, "CMP", :byte), do: CPU.compare(cpu, :immediate, :a)
   definstr xCA(cpu, "DEX", :none), do: CPU.decrement_register(cpu, :x)

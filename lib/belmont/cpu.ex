@@ -591,6 +591,31 @@ defmodule Belmont.CPU do
   end
 
   @doc """
+  decrement the given memory location by 1
+  """
+  def decrement_memory(cpu, addressing_mode) do
+    byte_address = AddressingMode.get_address(addressing_mode, cpu)
+    byte = Memory.read_byte(cpu.memory, byte_address.address)
+    wrapped_val = Integer.mod(byte - 1, 256)
+    memory = Memory.write_byte(cpu.memory, byte_address.address, wrapped_val)
+
+    {pc, cycle} =
+      case addressing_mode do
+        :zero_page -> {2, 5}
+        :zero_page_x -> {2, 6}
+        :absolute -> {3, 6}
+        :absolute_x -> {3, 7}
+      end
+
+    cpu
+    |> set_flag_with_test(:negative, wrapped_val)
+    |> set_flag_with_test(:zero, wrapped_val)
+    |> Map.put(:program_counter, cpu.program_counter + pc)
+    |> Map.put(:cycle_count, cpu.cycle_count + cycle)
+    |> Map.put(:memory, memory)
+  end
+
+  @doc """
   increment the given memory location by 1
   """
   def increment_memory(cpu, addressing_mode) do
