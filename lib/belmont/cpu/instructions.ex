@@ -8,6 +8,7 @@ defmodule Belmont.CPU.Instructions do
 
   definstr x01(cpu, "ORA", :byte), do: CPU.logical_op(cpu, :indexed_indirect, :or)
   definstr x05(cpu, "ORA", :byte), do: CPU.logical_op(cpu, :zero_page, :or)
+  definstr x06(cpu, "ASL", :byte), do: CPU.asl(cpu, :zero_page)
   definstr x08(cpu, "PHP", :none), do: CPU.php(cpu)
   definstr x09(cpu, "ORA", :byte), do: CPU.logical_op(cpu, :immediate, :or)
   definstr x0A(cpu, "ASL", :none), do: CPU.asl(cpu, :accumulator)

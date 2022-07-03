@@ -369,23 +369,9 @@ defmodule Belmont.CPU do
   @doc """
   Arithmetic shift accumulator or byte left
   """
-  def asl(cpu, addressing_mode) do
-    byte =
-      if addressing_mode == :accumulator do
-        cpu.registers.a
-      else
-        byte_address = AddressingMode.get_address(addressing_mode, cpu)
-        Memory.read_byte(cpu.memory, byte_address.address)
-      end
-
-    {pc, cycle} =
-      case addressing_mode do
-        :accumulator -> {1, 2}
-        :zero_page -> {2, 5}
-        :zero_page_x -> {2, 6}
-        :absolute -> {3, 6}
-        :absolute_x -> {3, 7}
-      end
+  def asl(cpu, :accumulator) do
+    byte = cpu.registers.a
+    {pc, cycle} = {1, 2}
 
     res = Bitwise.bsl(byte, 1) |> Bitwise.band(0xFF)
     cpu = if band(byte, @flags[:negative]) != 0, do: set_flag(cpu, :carry), else: unset_flag(cpu, :carry)
@@ -396,6 +382,30 @@ defmodule Belmont.CPU do
     |> set_register(:a, res)
     |> Map.put(:program_counter, cpu.program_counter + pc)
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
+  end
+
+  def asl(cpu, addressing_mode) do
+    byte_address = AddressingMode.get_address(addressing_mode, cpu)
+    byte = Memory.read_byte(cpu.memory, byte_address.address)
+
+    {pc, cycle} =
+      case addressing_mode do
+        :zero_page -> {2, 5}
+        :zero_page_x -> {2, 6}
+        :absolute -> {3, 6}
+        :absolute_x -> {3, 7}
+      end
+
+    res = Bitwise.bsl(byte, 1) |> Bitwise.band(0xFF)
+    cpu = if band(byte, @flags[:negative]) != 0, do: set_flag(cpu, :carry), else: unset_flag(cpu, :carry)
+    memory = Memory.write_byte(cpu.memory, byte_address.address, res)
+
+    cpu
+    |> set_flag_with_test(:zero, res)
+    |> set_flag_with_test(:negative, res)
+    |> Map.put(:program_counter, cpu.program_counter + pc)
+    |> Map.put(:cycle_count, cpu.cycle_count + cycle)
+    |> Map.put(:memory, memory)
   end
 
   @doc """
@@ -444,6 +454,7 @@ defmodule Belmont.CPU do
   Rotate accumulator or byte right
   """
   def ror(cpu, addressing_mode) do
+    # TODO: This needs extracting
     byte =
       if addressing_mode == :accumulator do
         cpu.registers.a
@@ -477,6 +488,7 @@ defmodule Belmont.CPU do
   Rotate accumulator or byte left
   """
   def rol(cpu, addressing_mode) do
+    # TODO: This needs extracting
     byte =
       if addressing_mode == :accumulator do
         cpu.registers.a
