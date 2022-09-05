@@ -25,6 +25,7 @@ defmodule Belmont.CPU.AddressingMode do
   * implied
   * accumulator
   * relative
+  * indirect_with_jmp_bug
   """
   # modes that don't return addresses
   def get_address(:implied, _cpu_state),
@@ -45,6 +46,7 @@ defmodule Belmont.CPU.AddressingMode do
 
   # indirect addresses.
   def get_address(:indirect, cpu_state), do: indirect_address(cpu_state, 0)
+  def get_address(:indirect_with_jmp_bug, cpu_state), do: indirect_address(cpu_state, 0, true)
   def get_address(:indexed_indirect, cpu_state), do: indexed_indirect_address(cpu_state, cpu_state.registers.x)
   def get_address(:indirect_indexed, cpu_state), do: indirect_indexed_address(cpu_state, cpu_state.registers.y)
 
@@ -87,11 +89,18 @@ defmodule Belmont.CPU.AddressingMode do
     }
   end
 
-  defp indirect_address(cpu_state, addend) do
+  defp indirect_address(cpu_state, addend, jmp_bug \\ false) do
     address = Memory.read_word(cpu_state.memory, cpu_state.program_counter + 1) + addend
+    mask = address &&& 0x00FF
 
     low_byte = Memory.read_byte(cpu_state.memory, address)
-    high_byte = Memory.read_byte(cpu_state.memory, address + 1)
+
+    high_byte =
+      if jmp_bug && mask == 0xFF do
+        Memory.read_byte(cpu_state.memory, address - 0xFF)
+      else
+        Memory.read_byte(cpu_state.memory, address + 1)
+      end
 
     %__MODULE__{address: high_byte <<< 8 ||| low_byte, page_crossed: false, additional_cycles: 0}
   end

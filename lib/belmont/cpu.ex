@@ -357,12 +357,16 @@ defmodule Belmont.CPU do
   read a word and set the program counter to that value
   """
   def jmp(cpu, addressing_mode) do
-    address = AddressingMode.get_address(addressing_mode, cpu)
-
     {pc, cycles} =
       case addressing_mode do
-        :absolute -> {address.address, 3}
-        :indirect -> {address.address, 5}
+        :absolute ->
+          address = AddressingMode.get_address(:absolute, cpu)
+          {address.address, 3}
+
+        # Handle a 6502 bug where
+        :indirect ->
+          address = AddressingMode.get_address(:indirect_with_jmp_bug, cpu)
+          {address.address, 5}
       end
 
     %{cpu | program_counter: pc, cycle_count: cpu.cycle_count + cycles}
