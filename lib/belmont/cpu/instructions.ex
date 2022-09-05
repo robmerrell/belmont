@@ -50,6 +50,7 @@ defmodule Belmont.CPU.Instructions do
   definstr x68(cpu, "PLA", :none), do: CPU.pla(cpu)
   definstr x69(cpu, "ADC", :byte), do: CPU.adc(cpu, :immediate)
   definstr x6A(cpu, "ROR", :none), do: CPU.ror(cpu, :accumulator)
+  definstr x6C(cpu, "JMP", :word), do: CPU.jmp(cpu, :indirect)
   definstr x6D(cpu, "ADC", :word), do: CPU.adc(cpu, :absolute)
   definstr x6E(cpu, "ROR", :word), do: CPU.ror(cpu, :absolute)
   definstr x70(cpu, "BVS", :byte), do: CPU.branch_if(cpu, fn cpu -> CPU.flag_set?(cpu, :overflow) end)

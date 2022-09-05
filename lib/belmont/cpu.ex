@@ -362,6 +362,7 @@ defmodule Belmont.CPU do
     {pc, cycles} =
       case addressing_mode do
         :absolute -> {address.address, 3}
+        :indirect -> {address.address, 5}
       end
 
     %{cpu | program_counter: pc, cycle_count: cpu.cycle_count + cycles}
