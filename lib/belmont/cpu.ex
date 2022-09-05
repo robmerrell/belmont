@@ -1,4 +1,5 @@
 defmodule Belmont.CPU do
+  # TODO: Are page_crossed ifs correct?
   @moduledoc """
   The cpu represents everything we need to emulate the NES CPU. The NES' CPU is a variation of the 6502
   processor that runs at 1.79 MHz (PAL regions is 1.66 MHz). One of the differences between the NES' CPU and the standard
@@ -681,8 +682,9 @@ defmodule Belmont.CPU do
         :zero_page -> {2, 3}
         :zero_page_y -> {2, 4}
         :absolute -> {3, 4}
-        :absolute_y -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
+        :absolute_y -> if byte_address.page_crossed, do: {3, 5}, else: {3, 4}
         :indexed_indirect -> {2, 6}
+        :indirect_indexed -> if byte_address.page_crossed, do: {2, 6}, else: {2, 5}
       end
 
     cpu

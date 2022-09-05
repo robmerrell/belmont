@@ -110,6 +110,27 @@ defmodule Belmont.CPU.AddressingModeTest do
     assert address.page_crossed == false
   end
 
+  test "Indirect Indexed addressing should return an address + y register" do
+    cpu =
+      FakeROM.rom(
+        prg_rom_data_override: [
+          [bank: 0, location: 0x0000, value: 0xB1],
+          [bank: 0, location: 0x0001, value: 0x86]
+        ]
+      )
+      |> Cartridge.parse_rom_contents!()
+      |> Memory.new()
+      |> Memory.write_byte(0x86, 0x28)
+      |> Memory.write_byte(0x87, 0x40)
+      |> CPU.new()
+      |> CPU.set_register(:y, 0x10)
+      |> Map.put(:program_counter, 0x8000)
+
+    address = Belmont.CPU.AddressingMode.get_address(:indirect_indexed, cpu)
+    assert address.address == 0x4038
+    assert address.page_crossed == false
+  end
+
   test "immediate addressing should return the address after the program counter" do
     cpu =
       FakeROM.rom(

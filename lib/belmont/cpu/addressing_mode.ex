@@ -46,6 +46,7 @@ defmodule Belmont.CPU.AddressingMode do
   # indirect addresses.
   def get_address(:indirect, cpu_state), do: indirect_address(cpu_state, 0)
   def get_address(:indexed_indirect, cpu_state), do: indexed_indirect_address(cpu_state, cpu_state.registers.x)
+  def get_address(:indirect_indexed, cpu_state), do: indirect_indexed_address(cpu_state, cpu_state.registers.y)
 
   # immediate address
   def get_address(:immediate, cpu_state),
@@ -96,13 +97,27 @@ defmodule Belmont.CPU.AddressingMode do
   end
 
   defp indexed_indirect_address(cpu_state, addend) do
-    address = Memory.read_word(cpu_state.memory, cpu_state.program_counter + 1) + addend &&& 0xFF
+    address = Memory.read_byte(cpu_state.memory, cpu_state.program_counter + 1) + addend &&& 0xFF
     wrapped = rem(address + 1, 256)
 
     low_byte = Memory.read_byte(cpu_state.memory, address)
     high_byte = Memory.read_byte(cpu_state.memory, wrapped)
 
     %__MODULE__{address: high_byte <<< 8 ||| low_byte, page_crossed: false, additional_cycles: 0}
+  end
+
+  defp indirect_indexed_address(cpu_state, addend) do
+    address = Memory.read_byte(cpu_state.memory, cpu_state.program_counter + 1)
+    wrapped = rem(address + 1, 256)
+
+    low_byte = Memory.read_byte(cpu_state.memory, address)
+    high_byte = Memory.read_byte(cpu_state.memory, wrapped)
+
+    combined_address = high_byte <<< 8 ||| low_byte
+    new_address = combined_address + addend &&& 0xFFFF
+
+    page_crossed = combined_address + addend > 0xFFFF || address + 1 > 0xFF
+    %__MODULE__{address: new_address, page_crossed: page_crossed, additional_cycles: 0}
   end
 
   # determine if a page cross occured between two addresses
