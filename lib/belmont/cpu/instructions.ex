@@ -15,6 +15,7 @@ defmodule Belmont.CPU.Instructions do
   definstr x0D(cpu, "ORA", :word), do: CPU.logical_op(cpu, :absolute, :or)
   definstr x0E(cpu, "ASL", :word), do: CPU.asl(cpu, :absolute)
   definstr x10(cpu, "BPL", :byte), do: CPU.branch_if(cpu, fn cpu -> !CPU.flag_set?(cpu, :negative) end)
+  definstr x11(cpu, "ORA", :byte), do: CPU.logical_op(cpu, :indirect_indexed, :or)
   definstr x18(cpu, "CLC", :none), do: CPU.unset_flag_op(cpu, :carry)
   definstr x20(cpu, "JSR", :word), do: CPU.jsr(cpu, :absolute)
   definstr x21(cpu, "AND", :byte), do: CPU.logical_op(cpu, :indexed_indirect, :and)
