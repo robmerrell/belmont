@@ -262,10 +262,10 @@ defmodule Belmont.CPU do
         :zero_page -> {2, 3}
         :zero_page_x -> {2, 4}
         :absolute -> {3, 4}
-        :absolute_x -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
-        :absolute_y -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
+        :absolute_x -> if byte_address.page_crossed, do: {3, 5}, else: {3, 4}
+        :absolute_y -> if byte_address.page_crossed, do: {3, 5}, else: {3, 4}
         :indexed_indirect -> {2, 6}
-        :indirect_indexed -> if byte_address.page_crossed, do: {2, 5}, else: {2, 6}
+        :indirect_indexed -> if byte_address.page_crossed, do: {2, 6}, else: {2, 5}
       end
 
     wrapped_val = rem(val, 256)
@@ -299,10 +299,10 @@ defmodule Belmont.CPU do
         :zero_page -> {2, 3}
         :zero_page_x -> {2, 4}
         :absolute -> {3, 4}
-        :absolute_x -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
-        :absolute_y -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
+        :absolute_x -> if byte_address.page_crossed, do: {3, 5}, else: {3, 4}
+        :absolute_y -> if byte_address.page_crossed, do: {3, 5}, else: {3, 4}
         :indexed_indirect -> {2, 6}
-        :indirect_indexed -> if byte_address.page_crossed, do: {2, 5}, else: {2, 6}
+        :indirect_indexed -> if byte_address.page_crossed, do: {2, 6}, else: {2, 5}
       end
 
     wrapped_val = if val < 0, do: 256 + val, else: val
@@ -654,10 +654,10 @@ defmodule Belmont.CPU do
         :zero_page -> {2, 3}
         :zero_page_x -> {2, 4}
         :absolute -> {3, 4}
-        :absolute_x -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
-        :absolute_y -> if byte_address.page_crossed, do: {3, 4}, else: {3, 5}
+        :absolute_x -> if byte_address.page_crossed, do: {3, 5}, else: {3, 4}
+        :absolute_y -> if byte_address.page_crossed, do: {3, 5}, else: {3, 4}
         :indexed_indirect -> {2, 6}
-        :indirect_indexed -> if byte_address.page_crossed, do: {2, 5}, else: {2, 6}
+        :indirect_indexed -> if byte_address.page_crossed, do: {2, 6}, else: {2, 5}
       end
 
     cpu = if cpu.registers[reg] >= byte, do: set_flag(cpu, :carry), else: unset_flag(cpu, :carry)
