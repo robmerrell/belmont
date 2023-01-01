@@ -85,6 +85,7 @@ defmodule Belmont.CPU.Instructions do
   definstr xB1(cpu, "LDA", :byte), do: CPU.load_register(cpu, :indirect_indexed, :a)
   definstr xB8(cpu, "CLV", :none), do: CPU.unset_flag_op(cpu, :overflow)
   definstr xBA(cpu, "TSX", :none), do: CPU.transfer_stack_x(cpu)
+  definstr xB9(cpu, "LDA", :word), do: CPU.load_register(cpu, :absolute_y, :a)
   definstr xC0(cpu, "CPY", :byte), do: CPU.compare(cpu, :immediate, :y)
   definstr xC1(cpu, "CMP", :byte), do: CPU.compare(cpu, :indexed_indirect, :a)
   definstr xC4(cpu, "CPY", :byte), do: CPU.compare(cpu, :zero_page, :y)

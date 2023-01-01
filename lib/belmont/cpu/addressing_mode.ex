@@ -5,6 +5,7 @@ defmodule Belmont.CPU.AddressingMode do
   """
 
   use Bitwise
+  alias Belmont.Hexstr
   alias Belmont.Memory
 
   defstruct address: 0x0000, page_crossed: false, additional_cycles: 0
@@ -83,7 +84,7 @@ defmodule Belmont.CPU.AddressingMode do
     address = Memory.read_word(cpu_state.memory, cpu_state.program_counter + 1)
 
     %__MODULE__{
-      address: address + addend,
+      address: rem(address + addend, 65_536),
       page_crossed: page_crossed?(address, address + addend),
       additional_cycles: 0
     }
