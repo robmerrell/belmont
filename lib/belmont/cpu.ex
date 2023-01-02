@@ -685,8 +685,10 @@ defmodule Belmont.CPU do
       case addressing_mode do
         :immediate -> {2, 2}
         :zero_page -> {2, 3}
+        :zero_page_x -> {2, 4}
         :zero_page_y -> {2, 4}
         :absolute -> {3, 4}
+        :absolute_x -> if byte_address.page_crossed, do: {3, 5}, else: {3, 4}
         :absolute_y -> if byte_address.page_crossed, do: {3, 5}, else: {3, 4}
         :indexed_indirect -> {2, 6}
         :indirect_indexed -> if byte_address.page_crossed, do: {2, 6}, else: {2, 5}
@@ -709,6 +711,7 @@ defmodule Belmont.CPU do
       case addressing_mode do
         :zero_page -> {2, 3}
         :zero_page_x -> {2, 4}
+        :zero_page_y -> {2, 4}
         :absolute -> {3, 4}
         :absolute_x -> {3, 5}
         :absolute_y -> {3, 5}
