@@ -39,11 +39,15 @@ defmodule Mix.Tasks.Nestest do
 
   defp log_lines_match?(belmont_log, nestest_log) do
     # just make sure the first and last parts of the log lines match
-    belmont_beginning = String.slice(belmont_log, 0..19)
-    nestest_beginning = String.slice(nestest_log, 0..19)
+    belmont_beginning = String.slice(belmont_log, 0..19) |> String.trim()
+    nestest_beginning = String.slice(nestest_log, 0..19) |> String.trim()
 
-    belmont_end = String.slice(belmont_log, 48..80)
-    nestest_end = String.slice(nestest_log, 48..80)
+    belmont_end = String.slice(belmont_log, 48..80) |> String.trim()
+    nestest_end = String.slice(nestest_log, 48..80) |> String.trim()
+
+    # adjust the nestest log for unsupported opcodes, just to make things easy
+    # until we have a PPU
+    nestest_beginning = Regex.replace(~r/\*(\w+)/, nestest_beginning, " *\\1")
 
     belmont_beginning == nestest_beginning && belmont_end == nestest_end
   end
