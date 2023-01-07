@@ -1,5 +1,5 @@
 defmodule Belmont.CPU do
-  # TODO: Are page_crossed ifs correct?
+  # TODO: Are page_crossed ifs correct? I think I'm missing some on indirect_indexed...
   @moduledoc """
   The cpu represents everything we need to emulate the NES CPU. The NES' CPU is a variation of the 6502
   processor that runs at 1.79 MHz (PAL regions is 1.66 MHz). One of the differences between the NES' CPU and the standard
@@ -749,6 +749,29 @@ defmodule Belmont.CPU do
   def store_register(cpu, addressing_mode, register) do
     address = AddressingMode.get_address(addressing_mode, cpu)
     memory = Memory.write_byte(cpu.memory, address.address, cpu.registers[register])
+
+    {pc, cycle} =
+      case addressing_mode do
+        :zero_page -> {2, 3}
+        :zero_page_x -> {2, 4}
+        :zero_page_y -> {2, 4}
+        :absolute -> {3, 4}
+        :absolute_x -> {3, 5}
+        :absolute_y -> {3, 5}
+        :indexed_indirect -> {2, 6}
+        :indirect_indexed -> {2, 6}
+      end
+
+    %{cpu | memory: memory, program_counter: cpu.program_counter + pc, cycle_count: cpu.cycle_count + cycle}
+  end
+
+  @doc """
+  illegal opcode that stores A&X into memory
+  """
+  def sax(cpu, addressing_mode) do
+    address = AddressingMode.get_address(addressing_mode, cpu)
+    value = cpu.registers.a &&& cpu.registers.x
+    memory = Memory.write_byte(cpu.memory, address.address, value)
 
     {pc, cycle} =
       case addressing_mode do
