@@ -623,11 +623,42 @@ defmodule Belmont.CPU do
         :zero_page_x -> {2, 6}
         :absolute -> {3, 6}
         :absolute_x -> {3, 7}
+        :indexed_indirect -> {2, 6}
       end
 
     cpu
     |> set_flag_with_test(:negative, wrapped_val)
     |> set_flag_with_test(:zero, wrapped_val)
+    |> Map.put(:program_counter, cpu.program_counter + pc)
+    |> Map.put(:cycle_count, cpu.cycle_count + cycle)
+    |> Map.put(:memory, memory)
+  end
+
+  @doc """
+  illegal opcode that implements DEC + CMP
+  """
+  def dcp(cpu, addressing_mode) do
+    byte_address = AddressingMode.get_address(addressing_mode, cpu)
+    byte = Memory.read_byte(cpu.memory, byte_address.address)
+    wrapped_val = Integer.mod(byte - 1, 256)
+    memory = Memory.write_byte(cpu.memory, byte_address.address, wrapped_val)
+
+    {pc, cycle} =
+      case addressing_mode do
+        :zero_page -> {2, 5}
+        :zero_page_x -> {2, 6}
+        :absolute -> {3, 6}
+        :absolute_x -> {3, 7}
+        :absolute_y -> {3, 7}
+        :indexed_indirect -> {2, 8}
+        :indirect_indexed -> {2, 8}
+      end
+
+    cpu = if cpu.registers.a >= wrapped_val, do: set_flag(cpu, :carry), else: unset_flag(cpu, :carry)
+    cpu = if cpu.registers.a == wrapped_val, do: set_flag(cpu, :zero), else: unset_flag(cpu, :zero)
+
+    cpu
+    |> set_flag_with_test(:negative, cpu.registers.a - wrapped_val)
     |> Map.put(:program_counter, cpu.program_counter + pc)
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
     |> Map.put(:memory, memory)
