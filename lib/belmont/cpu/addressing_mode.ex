@@ -126,7 +126,7 @@ defmodule Belmont.CPU.AddressingMode do
     combined_address = high_byte <<< 8 ||| low_byte
     new_address = combined_address + addend &&& 0xFFFF
 
-    page_crossed = combined_address + addend > 0xFFFF || address + 1 > 0xFF
+    page_crossed = page_crossed?(combined_address, new_address)
     %__MODULE__{address: new_address, page_crossed: page_crossed, additional_cycles: 0}
   end
 

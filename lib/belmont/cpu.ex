@@ -376,7 +376,6 @@ defmodule Belmont.CPU do
           address = AddressingMode.get_address(:absolute, cpu)
           {address.address, 3}
 
-        # Handle a 6502 bug where
         :indirect ->
           address = AddressingMode.get_address(:indirect_with_jmp_bug, cpu)
           {address.address, 5}
@@ -715,7 +714,38 @@ defmodule Belmont.CPU do
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
   end
 
-  # stores the contents of the register into memory
+  @doc """
+  illegal opcode that combines LDA + LDX
+  """
+  def lax(cpu, addressing_mode) do
+    byte_address = AddressingMode.get_address(addressing_mode, cpu)
+    byte = Memory.read_byte(cpu.memory, byte_address.address)
+
+    {pc, cycle} =
+      case addressing_mode do
+        :immediate -> {2, 2}
+        :zero_page -> {2, 3}
+        :zero_page_x -> {2, 4}
+        :zero_page_y -> {2, 4}
+        :absolute -> {3, 4}
+        :absolute_x -> if byte_address.page_crossed, do: {3, 5}, else: {3, 4}
+        :absolute_y -> if byte_address.page_crossed, do: {3, 5}, else: {3, 4}
+        :indexed_indirect -> {2, 6}
+        :indirect_indexed -> if byte_address.page_crossed, do: {2, 6}, else: {2, 5}
+      end
+
+    cpu
+    |> set_register(:a, byte)
+    |> set_register(:x, byte)
+    |> set_flag_with_test(:zero, byte)
+    |> set_flag_with_test(:negative, byte)
+    |> Map.put(:program_counter, cpu.program_counter + pc)
+    |> Map.put(:cycle_count, cpu.cycle_count + cycle)
+  end
+
+  @doc """
+  stores the contents of the register into memory
+  """
   def store_register(cpu, addressing_mode, register) do
     address = AddressingMode.get_address(addressing_mode, cpu)
     memory = Memory.write_byte(cpu.memory, address.address, cpu.registers[register])
