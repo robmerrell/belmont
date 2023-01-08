@@ -111,6 +111,10 @@ defmodule Belmont.Memory do
         ram = put_elem(memory.ram, rem(location, 0x800), value)
         %{memory | ram: ram}
 
+      location >= 0x4000 and location <= 0x4015 ->
+        IO.puts("Writing to #{Hexstr.hex(location, 4)} - Unhandled register write")
+        memory
+
       location >= 0x8000 and location <= 0xFFFF ->
         # write to cartridge ROM for bank switches
         memory.mapper.write_byte(memory, location, value)
