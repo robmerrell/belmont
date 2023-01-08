@@ -557,6 +557,7 @@ defmodule Belmont.CPU do
         :zero_page_x -> {2, 6}
         :absolute -> {3, 6}
         :absolute_x -> {3, 7}
+        _ -> {0, 0}
       end
 
     carry_bit = if flag_set?(cpu, :carry), do: 1, else: 0
@@ -570,6 +571,35 @@ defmodule Belmont.CPU do
     |> Map.put(:program_counter, cpu.program_counter + pc)
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
     |> Map.put(:memory, memory)
+  end
+
+  @doc """
+  Illegal instruction that performs ROR + ADC
+  """
+  def rra(cpu, addressing_mode) do
+    {pc, cycle} =
+      case addressing_mode do
+        :zero_page -> {2, 5}
+        :zero_page_x -> {2, 6}
+        :absolute -> {3, 6}
+        :absolute_x -> {3, 7}
+        :absolute_y -> {3, 7}
+        :indexed_indirect -> {2, 8}
+        :indirect_indexed -> {2, 8}
+      end
+
+    orig_pc = cpu.program_counter
+    orig_cycle = cpu.cycle_count
+    pc = orig_pc + pc
+    cycle = orig_cycle + cycle
+
+    cpu
+    |> ror(addressing_mode)
+    |> Map.put(:program_counter, orig_pc)
+    |> Map.put(:cycle_count, orig_cycle)
+    |> adc(addressing_mode)
+    |> Map.put(:program_counter, pc)
+    |> Map.put(:cycle_count, cycle)
   end
 
   @doc """
