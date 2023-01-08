@@ -68,8 +68,10 @@ defmodule Belmont.CPU.AddressingMode do
         cpu_state.program_counter + 2 + branch_offset - 0x100
       end
 
-    cycles = if page_crossed?(cpu_state.program_counter, address), do: 2, else: 1
-    %__MODULE__{address: address, page_crossed: false, additional_cycles: cycles}
+    # page crossed is after the branch offset fetch: http://forum.6502.org/viewtopic.php?f=8&t=6370
+    page_crossed = page_crossed?(cpu_state.program_counter + 2, address)
+    # TODO: Remove additional cycles?
+    %__MODULE__{address: address, page_crossed: page_crossed, additional_cycles: 0}
   end
 
   # handles zero page addresses

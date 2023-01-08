@@ -484,6 +484,7 @@ defmodule Belmont.CPU do
         :zero_page_x -> {2, 6}
         :absolute -> {3, 6}
         :absolute_x -> {3, 7}
+        _ -> {0, 0}
       end
 
     res = Bitwise.bsr(byte, 1)
@@ -496,6 +497,35 @@ defmodule Belmont.CPU do
     |> Map.put(:program_counter, cpu.program_counter + pc)
     |> Map.put(:cycle_count, cpu.cycle_count + cycle)
     |> Map.put(:memory, memory)
+  end
+
+  @doc """
+  illegal opcode that performs LSR + EOR
+  """
+  def sre(cpu, addressing_mode) do
+    {pc, cycle} =
+      case addressing_mode do
+        :zero_page -> {2, 5}
+        :zero_page_x -> {2, 6}
+        :absolute -> {3, 6}
+        :absolute_x -> {3, 7}
+        :absolute_y -> {3, 7}
+        :indexed_indirect -> {2, 8}
+        :indirect_indexed -> {2, 8}
+      end
+
+    orig_pc = cpu.program_counter
+    orig_cycle = cpu.cycle_count
+    pc = orig_pc + pc
+    cycle = orig_cycle + cycle
+
+    cpu
+    |> lsr(addressing_mode)
+    |> Map.put(:program_counter, orig_pc)
+    |> Map.put(:cycle_count, orig_cycle)
+    |> logical_op(addressing_mode, :eor)
+    |> Map.put(:program_counter, pc)
+    |> Map.put(:cycle_count, cycle)
   end
 
   @doc """
@@ -988,13 +1018,18 @@ defmodule Belmont.CPU do
   branch if the given function evaluates to true
   """
   def branch_if(cpu, fun) do
-    if fun.(cpu) do
-      byte_address = AddressingMode.get_address(:relative, cpu)
-      cycles = if byte_address.page_crossed, do: 4, else: 3
-      %{cpu | program_counter: byte_address.address, cycle_count: cpu.cycle_count + cycles}
-    else
-      %{cpu | program_counter: cpu.program_counter + 2, cycle_count: cpu.cycle_count + 2}
-    end
+    byte_address = AddressingMode.get_address(:relative, cpu)
+    cycles = 2
+
+    {pc, cycles} =
+      if fun.(cpu) do
+        cycles = if byte_address.page_crossed, do: cycles + 2, else: cycles + 1
+        {byte_address.address, cycles}
+      else
+        {cpu.program_counter + 2, cycles}
+      end
+
+    %{cpu | program_counter: pc, cycle_count: cpu.cycle_count + cycles}
   end
 
   @doc """
